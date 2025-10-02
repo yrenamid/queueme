@@ -1,0 +1,46 @@
+.my-swal-container {
+  z-index: 999999 !important;
+}
+
+/* Ensure SweetAlert2 toasts and modals appear above Ionic overlays */
+.swal2-container {
+  z-index: 999999 !important;
+}
+
+/* High-contrast Payment Method select styles (WCAG AA friendly) */
+.pm-select {
+  width: 100%;
+  background-color: #ffffff; /* white for maximum contrast on dark modal */
+  color: #283618; /* app dark text color */
+  border: 1px solid #DDA15E; /* matches palette */
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.25rem;
+}
+.pm-select:hover {
+  border-color: #bc8a47; /* slightly darker hover */
+}
+.pm-select:focus {
+  outline: none;
+  border-color: #DDA15E;
+  box-shadow: 0 0 0 3px rgba(221, 161, 94, 0.4); /* focus ring */
+}
+/* Placeholder style when no value selected */
+.pm-select.placeholder {
+  color: #6B7280; /* gray-500: readable but distinct */
+}
+/* Ensure dropdown options are readable */
+.pm-select option {
+  color: #283618;
+  background-color: #ffffff;
+}
+.pm-select option[disabled] {
+  color: #9CA3AF; /* gray-400 for placeholder option */
+}
+/* Selected/active option readability (subject to OS/browser control) */
+.pm-select option:checked {
+  background-color: #F1E0CB; /* light highlight aligned with palette */
+  color: #283618;
+}
+

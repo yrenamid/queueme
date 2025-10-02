@@ -1,0 +1,1 @@
+﻿# Root ignores\r\nbackend/node_modules/\r\nclient-side/node_modules/\r\nbackend/.env\r\nclient-side/.env\r\nclient-side/dist/\r\nclient-side/.vite/\r\n*.log\r\nlogs/\r\n

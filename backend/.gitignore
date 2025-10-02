@@ -1,0 +1,23 @@
+# Node
+node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+yarn.lock
+
+# Build outputs
+client-side/dist/
+client-side/.vite/
+backend/.cache/
+coverage/
+
+# Env/secrets
+.env
+backend/.env
+client-side/.env
+config/vapid.json
+config/subscriptions.json
+*.local
+
+# Logs
+*.log
+logs/

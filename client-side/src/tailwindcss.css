@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+#jomhuria{
+  font-family: "Jomhuria", serif;
+}
+#poppins{
+  font-family: "Poppins", sans-serif;
+}
+#inter{
+  font-family: "Inter", sans-serif;
+}
+.name{
+  font-family: "Jomhuria", serif;
+  font-weight: 400;
+  font-size: 45px;
+  color: #FFFFFF;
+}
+ion-toolbar span{
+  color: #BC6C25;
+}
