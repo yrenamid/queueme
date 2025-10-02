@@ -1,0 +1,13 @@
+{
+  "name": "queueme-root",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "postinstall": "npm install --prefix backend && npm install --prefix client-side",
+    "build": "npm run build --prefix client-side",
+    "start": "node backend/server.js"
+  }
+}
