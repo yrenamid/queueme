@@ -4,15 +4,14 @@ const { isPasswordStrong, hasNoInternalSpaces, isNotBlank, normalizePhoneDigits 
 
 
 
-// API handler: list Staff
+// list Staff
 async function listStaff(req, res) {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const pageSize = Math.min(Math.max(parseInt(req.query.pageSize) || 10, 1), 100);
-  // Compute pagination offset
     const offset = (page - 1) * pageSize;
     const [rows, totalRows] = await Promise.all([
-      query('SELECT id,name,email,role,created_at FROM users WHERE business_id=? ORDER BY created_at DESC LIMIT ? OFFSET ?', [req.user.business_id, pageSize, offset]),
+      query("SELECT id,name,email,role,created_at FROM users WHERE business_id=? ORDER BY (role='owner') DESC, created_at DESC LIMIT ? OFFSET ?", [req.user.business_id, pageSize, offset]),
       query('SELECT COUNT(*) as cnt FROM users WHERE business_id=?', [req.user.business_id])
     ]);
     res.json({ success:true, data: rows, pagination: { page, pageSize, total: totalRows[0].cnt, totalPages: Math.ceil(totalRows[0].cnt / pageSize) } });
@@ -22,7 +21,7 @@ async function listStaff(req, res) {
 
 
 
-// API handler: create Staff
+//create Staff
 async function createStaff(req, res) {
   const { name, email, password, role = 'cashier', phone } = req.body;
   if (!name || !email || !password) return res.status(400).json({ success:false, message:'Missing fields' });
@@ -63,7 +62,7 @@ async function createStaff(req, res) {
 
 
 
-// API handler: update Staff
+// update Staff
 async function updateStaff(req, res) {
   const { id } = req.params;
   const { name, role, password, email } = req.body;
@@ -94,7 +93,7 @@ async function updateStaff(req, res) {
 
 
 
-// API handler: delete Staff
+// delete Staff
 async function deleteStaff(req, res) {
   const { id } = req.params;
   try {

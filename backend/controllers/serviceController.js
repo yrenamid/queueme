@@ -2,7 +2,7 @@ const { query } = require('../database/connection');
 
 
 
-// Normalizes a service row into API shape
+
 function normalizeService(r){
   return {
     id: r.id,
@@ -16,7 +16,7 @@ function normalizeService(r){
 
 
 
-// API handler: list Services
+// list Services
 async function listServices(req, res){
   try {
     const rows = await query('SELECT id,name,description,price,duration_minutes,is_available FROM services WHERE business_id=? ORDER BY id DESC', [req.user.business_id]);
@@ -26,13 +26,12 @@ async function listServices(req, res){
 
 
 
-// API handler: create Service
+// create Service
 async function createService(req, res){
   const { name, description, price, duration, is_available, available } = req.body;
   if(!name || price == null) return res.status(400).json({ success:false, message:'Missing name or price' });
   const numericPrice = Number(price); if(Number.isNaN(numericPrice)) return res.status(400).json({ success:false, message:'Price must be numeric' });
   const durationMinutes = duration != null ? Number(duration) : null; if(durationMinutes!=null && Number.isNaN(durationMinutes)) return res.status(400).json({ success:false, message:'Duration must be numeric' });
-  // Accept both is_available and available flags for compatibility
   const availability = (typeof is_available === 'boolean') ? is_available : (typeof available === 'boolean' ? available : true);
   try {
     const result = await query('INSERT INTO services (business_id,name,description,price,duration_minutes,is_available) VALUES (?,?,?,?,?,?)', [req.user.business_id, name, description || null, numericPrice, durationMinutes, availability]);
@@ -43,12 +42,12 @@ async function createService(req, res){
 
 
 
-// API handler: update Service
+// update Service
 async function updateService(req, res){
   const { id } = req.params; const { name, description, price, duration, is_available, available } = req.body;
   const updates = []; const params = [];
 
-  // Helper to build dynamic update SQL
+  // dynamic update SQL
   function push(col,val){ updates.push(col+'=?'); params.push(val); }
   if(name !== undefined) push('name', name || null);
   if(description !== undefined) push('description', description || null);
@@ -66,7 +65,7 @@ async function updateService(req, res){
 
 
 
-// API handler: delete Service
+// delete Service
 async function deleteService(req, res){
   const { id } = req.params;
   try { await query('DELETE FROM services WHERE id=? AND business_id=?', [id, req.user.business_id]); res.json({ success:true, message:'Deleted' }); }

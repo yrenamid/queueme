@@ -2,7 +2,7 @@ const { query } = require('../database/connection');
 
 
 
-// API handler: get Dashboard Stats
+// get Dashboard Stats
 async function getDashboardStats(req, res) {
   try {
   const [today] = await query('SELECT COUNT(*) as totalWaiting FROM queues WHERE business_id=? AND status IN ("waiting","delayed")', [req.user.business_id]);
@@ -14,7 +14,7 @@ async function getDashboardStats(req, res) {
 
 
 
-// API handler: get Queue Summary
+//get Queue Summary
 async function getQueueSummary(req, res) {
   try {
     const businessId = req.user.business_id;
@@ -47,7 +47,7 @@ async function getQueueSummary(req, res) {
 
 
 
-// API handler: get Overview Metrics
+// get Overview Metrics
 async function getOverviewMetrics(req, res) {
   try {
     const businessId = req.user.business_id;
@@ -74,7 +74,7 @@ async function getOverviewMetrics(req, res) {
 module.exports = { getDashboardStats, getQueueSummary, getOverviewMetrics };
 
 
-// API handler: get Recent Activity
+// get Recent Activity
 async function getRecentActivity(req, res) {
   try {
     const businessId = req.user.business_id;
@@ -106,7 +106,6 @@ async function getRecentActivity(req, res) {
       ORDER BY ts DESC
       LIMIT 10`;
     const rows = await query(sql, [businessId, businessId, businessId, businessId]);
-  // Normalize records for UI consumption
     const items = (rows || []).filter(r => r.ts).map(r => ({
       id: Number(r.id),
       queue_number: r.queue_number,
@@ -126,7 +125,7 @@ module.exports.getRecentActivity = getRecentActivity;
 
 
 
-// API handler: get Analytics Series
+//get Analytics Series
 async function getAnalyticsSeries(req, res) {
   try {
     const businessId = req.user.business_id;
@@ -135,19 +134,11 @@ async function getAnalyticsSeries(req, res) {
 
     const now = new Date();
 
-  // Start of current day
     function startOfDay(d) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
-
-  // End of current day
     function endOfDay(d) { const x = new Date(d); x.setHours(23,59,59,999); return x; }
-
-  // Add n days to a date
     function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-
-  // Format date as MySQL-compatible timestamp
     function fmt(dt){
 
-  // Left-pad numbers to two digits
       const pad=(n)=>String(n).padStart(2,'0');
       const y=dt.getFullYear(); const m=pad(dt.getMonth()+1); const d=pad(dt.getDate());
       const hh=pad(dt.getHours()); const mm=pad(dt.getMinutes()); const ss=pad(dt.getSeconds());
@@ -187,10 +178,8 @@ async function getAnalyticsSeries(req, res) {
     const avgWaits = [];
 
 
-  // Label 24h hour as 12h with AM/PM
     function labelHour(h){ const ampm = h>=12 ? 'PM' : 'AM'; const hr = ((h+11)%12)+1; return `${hr}${ampm}`; }
 
-  // Format YYYY-MM-DD string key
     function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
     if (granularity === 'hour') {

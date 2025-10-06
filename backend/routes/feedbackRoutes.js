@@ -1,5 +1,5 @@
 
-// Feedback routes: public create and business feedback listing
+// public create and business feedback listing
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');

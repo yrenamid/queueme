@@ -1,5 +1,5 @@
 
-// Business routes: profile fetch/update and listing
+// profile fetch/update and listing
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');

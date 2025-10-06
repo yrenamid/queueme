@@ -1,6 +1,6 @@
 const { query } = require('./connection');
 
-// Ensure additive settings columns exist (idempotent, non-fatal on failure)
+
 async function ensureSettingsColumns() {
   try {
     const rows = await query(
@@ -51,6 +51,17 @@ async function ensureSettingsColumns() {
       await query('ALTER TABLE settings ADD COLUMN allow_delay TINYINT(1) NOT NULL DEFAULT 1 AFTER closing_time', []);
       console.log('[schema] Added settings.allow_delay');
     }
+
+    // toggle to enable online payments
+    const rowsAllowOnline = await query(
+      'SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+      ['settings', 'allow_online_payment']
+    );
+    const hasAllowOnline = Number(rowsAllowOnline?.[0]?.cnt || 0) > 0;
+    if (!hasAllowOnline) {
+      await query('ALTER TABLE settings ADD COLUMN allow_online_payment TINYINT(1) NOT NULL DEFAULT 0 AFTER allow_delay', []);
+      console.log('[schema] Added settings.allow_online_payment');
+    }
   } catch (e) {
     console.warn('[schema] ensureSettingsColumns failed (non-fatal):', e?.message || e);
   }
@@ -83,7 +94,7 @@ async function ensureQueueReadyColumns() {
   }
 }
 
-// Ensure queues.waiting_at exists for state transitions
+// Ensure queues.waiting_at 
 async function ensureQueueWaitingColumn() {
   try {
     const rows = await query(
@@ -117,7 +128,7 @@ async function ensureQueuePartySizeColumn() {
   }
 }
 
-// Ensure menu_items additive columns (category, duration_minutes, is_available)
+// Ensure menu_items additive columns 
 async function ensureMenuColumns() {
   try {
     const rCat = await query(
@@ -149,7 +160,7 @@ async function ensureMenuColumns() {
   }
 }
 
-// Add initial_estimated_wait_time to preserve original EWT (pre-delay)
+// Add initial_estimated_wait_time to preserve original EWT 
 async function ensureQueueInitialEWTColumn() {
   try {
     const rows = await query('SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', ['queues', 'initial_estimated_wait_time']);
@@ -164,7 +175,7 @@ async function ensureQueueInitialEWTColumn() {
   }
 }
 
-// Ensure services table exists and additive columns (duration_minutes, is_available)
+// Ensure services table exists and additive columns 
 async function ensureServicesColumns() {
   try {
     const t = await query(
@@ -200,7 +211,6 @@ async function ensureServicesColumns() {
       await query('ALTER TABLE services ADD COLUMN duration_minutes INT NULL AFTER price');
       console.log('[schema] Added services.duration_minutes');
     }
-  // ensure is_available present
     const rAvail = await query(
       'SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
       ['services', 'is_available']
@@ -216,7 +226,7 @@ async function ensureServicesColumns() {
 
 module.exports = { ensureSettingsColumns, ensureQueueReadyColumns, ensureQueueWaitingColumn, ensureQueuePartySizeColumn, ensureMenuColumns, ensureServicesColumns, ensureQueueInitialEWTColumn };
 
-// Ensure queues.status enum includes all states and is non-null with default
+
 async function ensureQueueStatusEnum() {
   try {
     const rows = await query(
@@ -226,10 +236,8 @@ async function ensureQueueStatusEnum() {
     const info = rows && rows[0] ? rows[0] : {};
     const colType = String(info.COLUMN_TYPE || '').toLowerCase();
     const isNullable = String(info.IS_NULLABLE || '').toUpperCase() === 'YES';
-    // current default
     const def = (info.COLUMN_DEFAULT == null ? null : String(info.COLUMN_DEFAULT).toLowerCase());
     const desired = `enum('pending','waiting','called','pending_payment','served','cancelled','delayed')`;
-    // decide if alter is needed
     const needsAlter = (!colType.includes("'delayed'")) || (!colType.includes("'pending_payment'")) || isNullable || def !== 'pending' || !colType.startsWith('enum(');
 
     try {
@@ -248,7 +256,7 @@ async function ensureQueueStatusEnum() {
 
 module.exports.ensureQueueStatusEnum = ensureQueueStatusEnum;
 
-// Ensure users.phone exists (and index)
+
 async function ensureUsersPhoneColumn() {
   try {
     const rows = await query(
@@ -267,7 +275,7 @@ async function ensureUsersPhoneColumn() {
 
 module.exports.ensureUsersPhoneColumn = ensureUsersPhoneColumn;
 
-// Ensure notification toggles/templates exist (email/SMS only; push removed)
+// Ensure notification toggles/templates exist 
 async function ensureNotificationSettingsColumns() {
   try {
     const toggles = [
@@ -293,7 +301,7 @@ async function ensureNotificationSettingsColumns() {
         await query(`ALTER TABLE settings ADD COLUMN ${col} ${type} AFTER notify_via_sms`);
       }
     }
-    // Push-related schema is no longer created (notify_via_push, notify_template_push, push_subscriptions)
+    
   } catch (e) {
     console.warn('[schema] ensureNotificationSettingsColumns failed (non-fatal):', e?.message || e);
   }

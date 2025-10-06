@@ -8,7 +8,7 @@ const { normalizePhoneDigits, isPasswordStrong, hasNoInternalSpaces, isNotBlank,
 
 
 
-// API handler: register Business
+// register Business
 async function registerBusiness(req, res) {
   const { name, email, phone, password, category, staff = [], max_queue_length, reserve_slots, notify_customer } = req.body;
   console.log('[registerBusiness] incoming', { name, email, phone, category, staffCount: Array.isArray(staff)? staff.length : 'n/a' });
@@ -111,7 +111,7 @@ async function registerBusiness(req, res) {
 
 
 
-// API handler: login
+//login
 async function login(req, res) {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ success: false, message: 'Missing email or password' });
@@ -149,7 +149,7 @@ async function login(req, res) {
 
 
 
-// API handler: logout
+// logout
 async function logout(req, res) {
   return res.json({ success: true, message: 'Logged out' });
 }

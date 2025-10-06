@@ -4,7 +4,7 @@ const { sendEmail, sendSMS } = require('../utils/notifications');
 
 
 
-// Recomputes estimated wait times (EWT) for all active queues of a business
+// Recomputes EWT for all active queues of a business
 async function recomputeEWTForActive(businessId) {
 
   let staff = 1;
@@ -36,7 +36,7 @@ async function recomputeEWTForActive(businessId) {
   );
 
 
-  // Computes this order's duration in minutes, factoring staff efficiency
+  // Computes this order's duration in minutes
   function computeThisOrderMinutes(row) {
     let items = [];
     try { items = Array.isArray(row.order_items) ? row.order_items : JSON.parse(row.order_items || '[]'); } catch {}
@@ -54,7 +54,7 @@ async function recomputeEWTForActive(businessId) {
       totalDur += perMin * q; totalQty += q;
     }
     const effStaffRaw = Math.max(1, Number(staff) || 1);
-    const effStaff = 1 + 0.7 * (effStaffRaw - 1); // diminishing returns
+    const effStaff = 1 + 0.7 * (effStaffRaw - 1); 
     return (totalDur / Math.max(1, effStaff));
   }
 
@@ -79,7 +79,7 @@ async function recomputeEWTForActive(businessId) {
           staff_used: staff
         });
       } catch {}
-      // Update estimated_wait_time; preserve initial_estimated_wait_time if not set yet
+      // Update estimated_wait_time
       try {
         await query('UPDATE queues SET estimated_wait_time=?, initial_estimated_wait_time=COALESCE(initial_estimated_wait_time, ?) WHERE id=? AND business_id=?', [newEWT, newEWT, row.id, businessId]);
       } catch (_) {
@@ -89,7 +89,6 @@ async function recomputeEWTForActive(businessId) {
       try {
         broadcast('queue:updated', { business_id: businessId, id: Number(row.id), queue_number: Number(row.queue_number), estimated_wait_time: Number(newEWT) });
       } catch(_) {  }
-      // For averaging ahead for followers: use initial EWT if this row is delayed; else use current EWT
       const isPending = String(row.status).toLowerCase() === 'pending';
       const isDelayed = String(row.status).toLowerCase() === 'delayed';
       const valForAvg = isDelayed && (row.initial_estimated_wait_time != null)
@@ -105,7 +104,7 @@ async function recomputeEWTForActive(businessId) {
 
 
 
-// API handler: join Queue
+// join Queue
 async function joinQueue(req, res) {
   const { customer_name, customer_email, customer_phone, order_items = [], order_total = 0, is_priority = false, notes, party_size } = req.body;
   const { normalizePhoneDigits, isNotBlank, isValidPHPhone } = require('../utils/validators');
@@ -186,7 +185,6 @@ async function joinQueue(req, res) {
 
         const [setRows] = await lockConn.query('SELECT reserve_slots FROM settings WHERE business_id=?', [businessId]);
         const set = Array.isArray(setRows) ? setRows[0] : null;
-          // Priority cap from settings.reserve_slots
         const cap = (set && set.reserve_slots != null) ? Number(set.reserve_slots) : 0;
 
         if (cap <= 0) {
@@ -250,13 +248,13 @@ async function joinQueue(req, res) {
     try {
 
       let staff = 1;
-      let avgFallback = 5; // fallback prep time (minutes) when an item has no duration configured
+      let avgFallback = 5; 
       let menuMap = new Map();
       let svcMap = new Map();
       try {
         const [set] = await query('SELECT available_kitchen_staff FROM settings WHERE business_id=?', [businessId]);
         staff = (set && set.available_kitchen_staff != null) ? Number(set.available_kitchen_staff) : 1;
-        if (!Number.isFinite(staff) || staff <= 0) staff = 1; // ensure at least 1 worker
+        if (!Number.isFinite(staff) || staff <= 0) staff = 1; 
       } catch {}
       try {
         const [b] = await query('SELECT avg_prep_time FROM businesses WHERE id=?', [businessId]);
@@ -271,13 +269,11 @@ async function joinQueue(req, res) {
         svcMap = new Map(svcRows.map(r => [Number(r.id), (r.duration_minutes != null ? Number(r.duration_minutes) : null)]));
       } catch {}
 
-  // Parses provided order_items value into an array
       function parseItems(val){
         if (!val) return [];
         if (Array.isArray(val)) return val;
         try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : []; } catch { return []; }
       }
-  // Computes per-item duration contribution (minutes)
       function itemDuration(it){
 
         const q = Math.max(1, Number(it?.quantity || 1));
@@ -288,7 +284,7 @@ async function joinQueue(req, res) {
           per = (menuMap.get(idNum) ?? svcMap.get(idNum) ?? null);
         }
         if (per == null || !Number.isFinite(per)) per = avgFallback;
-        return Math.max(0, Number(per)) * q; // return duration contribution = per * quantity
+        return Math.max(0, Number(per)) * q; 
       }
 
 
@@ -304,7 +300,6 @@ async function joinQueue(req, res) {
         'SELECT status, estimated_wait_time, initial_estimated_wait_time FROM queues WHERE business_id=? AND status IN ("waiting","called","delayed") AND is_priority=? AND queue_number < ? ORDER BY queue_number ASC',
         [businessId, inserted?.is_priority ? 1 : 0, nextNumber]
       );
-      // Use initial EWT for delayed rows; current for others
       const vals = (aheadRows||[]).map(r => {
         const isDelayed = String(r.status || '').toLowerCase() === 'delayed';
         if (isDelayed && r.initial_estimated_wait_time != null) return Math.max(0, Number(r.initial_estimated_wait_time) || 0);
@@ -334,7 +329,7 @@ async function joinQueue(req, res) {
 }
 
 
-// API handler: list Queue
+// list Queue
 async function listQueue(req, res) {
   try {
   const allowed = ['pending','waiting','called','pending_payment','delayed','served','cancelled','no_show'];
@@ -372,7 +367,7 @@ async function listQueue(req, res) {
 }
 
 
-// API handler: update Queue Status
+//  update Queue Status
 async function updateQueueStatus(req, res) {
   const { id } = req.params;
   const { status, payment_status, payment_method } = req.body;
@@ -430,36 +425,35 @@ async function updateQueueStatus(req, res) {
     } catch {}
 
     try {
-      if (status === 'called') {
-  const [bizSet] = await query('SELECT notify_via_email, notify_via_sms, notify_template_email, notify_template_sms, sms_notifications_enabled, sms_message_template FROM settings WHERE business_id=?', [req.user.business_id]);
+    if (status === 'called') {
+  const [bizSet] = await query('SELECT notify_customer, notify_via_email, notify_via_sms, notify_template_email, notify_template_sms, sms_notifications_enabled, sms_message_template FROM settings WHERE business_id=?', [req.user.business_id]);
         const [row] = await query('SELECT customer_name, customer_email, customer_phone, queue_number FROM queues WHERE id=? AND business_id=?', [id, req.user.business_id]);
         const context = { customer_name: row?.customer_name || 'Customer', queue_number: row?.queue_number || '-', business_id: req.user.business_id };
 
-  // Renders a basic template using {{customer_name}} and {{queue_number}}
         const render = (tpl, fallback) => {
           const src = String(tpl || fallback || '');
           return src
 
             .replace(/\{\{\s*customer_name\s*\}\}/gi, context.customer_name)
             .replace(/\{\{\s*queue_number\s*\}\}/gi, String(context.queue_number))
-// API handler: update Queue Details
+// update Queue Details
             .replace(/\{\s*customer_name\s*\}/gi, context.customer_name)
             .replace(/\{\s*queue_number\s*\}/gi, String(context.queue_number));
         };
 
-        if (bizSet?.notify_via_email && row?.customer_email) {
+        const notifyEnabled = (bizSet?.notify_customer == null) ? true : !!Number(bizSet.notify_customer);
+        if (notifyEnabled && bizSet?.notify_via_email && row?.customer_email) {
           const subject = 'You are being called';
           const body = render(bizSet.notify_template_email, 'Hello {{customer_name}}, your queue number {{queue_number}} is being called now.');
           try { await sendEmail({ to: row.customer_email, subject, html: `<p>${body}</p>` }); } catch(e) { console.warn('[notify][email]', e?.message || e); }
         }
 
-        const smsEnabled = !!(bizSet?.notify_via_sms || bizSet?.sms_notifications_enabled);
+        const smsEnabled = notifyEnabled && !!(bizSet?.notify_via_sms || bizSet?.sms_notifications_enabled);
         if (smsEnabled && row?.customer_phone) {
           const text = render(bizSet.notify_template_sms || bizSet?.sms_message_template, 'Hello {{customer_name}}, your queue number {{queue_number}} is being called.');
           try { await sendSMS({ to: row.customer_phone, message: text }); } catch(e) { console.warn('[notify][sms]', e?.message || e); }
         }
 
-        // Push notifications removed
       }
     } catch (e) { console.warn('[notify][updateQueueStatus]', e?.message || e); }
     res.json({ success:true, message:'Status updated'});
@@ -468,7 +462,7 @@ async function updateQueueStatus(req, res) {
 
 
 
-// API handler: update Queue Details
+// update Queue Details
 async function updateQueueDetails(req, res) {
   const { id } = req.params;
   const businessId = req.user.business_id;
@@ -486,7 +480,7 @@ async function updateQueueDetails(req, res) {
     }
 
 
-  // When toggling priority on, enforce reserved-slots capacity with a DB lock
+  // enforce reserved-slots capacity with a DB lock
     const wantPriorityToggle = (is_priority != null) ? !!is_priority : null;
     if (wantPriorityToggle === true) {
       lockConn = await getConnection();
@@ -504,7 +498,6 @@ async function updateQueueDetails(req, res) {
 
         const [setRows] = await lockConn.query('SELECT reserve_slots FROM settings WHERE business_id=?', [businessId]);
         const set = Array.isArray(setRows) ? setRows[0] : null;
-        // Handles cap
         const cap = (set && set.reserve_slots != null) ? Number(set.reserve_slots) : 0;
 
         if (cap <= 0) {
@@ -608,7 +601,7 @@ async function updateQueueDetails(req, res) {
 }
 
 
-// API handler: call Selected Customers
+//  call Selected Customers
 async function callSelectedCustomers(req, res) {
   const { ids } = req.body || {};
   if (!Array.isArray(ids) || ids.length === 0) {
@@ -638,7 +631,6 @@ async function callSelectedCustomers(req, res) {
 
 
     const placeholders = cleanIds.map(() => '?').join(',');
-  // Build eligibility SQL based on business category
     const eligSql = (category === 'service')
       ? `SELECT id FROM queues WHERE business_id = ? AND status IN ('waiting','delayed') AND id IN (${placeholders}) ORDER BY is_priority DESC, queue_number ASC`
       : `SELECT id FROM queues WHERE business_id = ? AND status IN ('waiting','delayed') AND payment_status = 'paid' AND id IN (${placeholders}) ORDER BY is_priority DESC, queue_number ASC`;
@@ -659,7 +651,6 @@ async function callSelectedCustomers(req, res) {
         if (u && u.id) callerId = Number(u.id);
       }
     } catch {}
-  // Build update SQL (called capacity limited by available staff)
     const updSql = (category === 'service')
       ? `UPDATE queues SET status='called', called_by=${callerId != null ? '?' : 'NULL'}, called_at = NOW() WHERE business_id = ? AND id IN (${updPlaceholders}) AND status IN ('waiting','delayed')`
       : `UPDATE queues SET status='called', called_by=${callerId != null ? '?' : 'NULL'}, called_at = NOW() WHERE business_id = ? AND id IN (${updPlaceholders}) AND status IN ('waiting','delayed') AND payment_status='paid'`;
@@ -681,7 +672,7 @@ async function callSelectedCustomers(req, res) {
         const rows = await query(`SELECT id, customer_name, customer_email, customer_phone, queue_number FROM queues WHERE business_id=? AND id IN (${idsForNotify.map(()=>'?').join(',')})`, [req.user.business_id, ...idsForNotify]);
         for (const r of rows) {
           const context = { customer_name: r.customer_name || 'Customer', queue_number: r.queue_number || '-', business_id: req.user.business_id };
-          // Renders a basic template using {{customer_name}} and {{queue_number}}
+          // basic template
           const render = (tpl, fallback) => String(tpl || fallback)
             .replace(/\{\{\s*customer_name\s*\}\}/gi, context.customer_name)
             .replace(/\{\{\s*queue_number\s*\}\}/gi, String(context.queue_number))
@@ -697,7 +688,6 @@ async function callSelectedCustomers(req, res) {
             const text = render(bizSet.notify_template_sms || bizSet?.sms_message_template, 'Hello {{customer_name}}, your queue number {{queue_number}} is being called.');
             try { await sendSMS({ to: r.customer_phone, message: text }); } catch(_) {}
           }
-          // Push notifications removed
         }
       }
     } catch(e) { console.warn('[notify][callSelectedCustomers]', e?.message || e); }

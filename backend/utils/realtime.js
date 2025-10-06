@@ -1,9 +1,8 @@
-// Lightweight WebSocket broadcast helper for realtime updates
+// WebSocket for realtime updates
 const { WebSocketServer } = require('ws');
 
 let wss = null;
 
-// Initialize WSS at /ws on the given HTTP server
 function init(server) {
   if (wss) return wss;
   wss = new WebSocketServer({ server, path: '/ws' });
@@ -14,7 +13,6 @@ function init(server) {
   return wss;
 }
 
-// Broadcast a typed payload to all connected clients
 function broadcast(type, data) {
   if (!wss) return;
   const payload = JSON.stringify({ type, data });

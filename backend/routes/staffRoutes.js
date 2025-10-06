@@ -1,5 +1,5 @@
 
-// Staff routes: list/create/update/delete staff (owner only)
+//list/create/update/delete staff (owner only)
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');

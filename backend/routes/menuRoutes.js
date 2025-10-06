@@ -1,5 +1,5 @@
 
-// Menu routes: CRUD for menu items
+//CRUD for menu items
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');

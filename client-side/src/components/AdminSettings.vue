@@ -40,6 +40,7 @@
             v-model:notifyPush="form.notifyCustomer"
             v-model:availableKitchenStaff="form.availableKitchenStaff"
             v-model:allowDelay="form.allowDelay"
+            v-model:allowOnlinePayment="form.allowOnlinePayment"
           />
           <div class="rounded-md border border-white/20 bg-white/5 p-3 text-xs text-white/90">
             <div class="flex items-start gap-2">
@@ -182,6 +183,7 @@ export default {
       notifyCustomer: true,
       availableKitchenStaff: 1,
       allowDelay: true,
+      allowOnlinePayment: false,
     });
 
     const originalSnapshot = ref(null);
@@ -230,7 +232,7 @@ export default {
       return Object.values(staffValidationErrors.value).every((v) => !v);
     });
 
-  const staffChanged = () => false; // placeholder: extend if staff diffing is added
+  const staffChanged = () => false; // placeholder for staff diffing
 
     const dirty = computed(() => {
       if (!originalSnapshot.value) return false;
@@ -240,6 +242,7 @@ export default {
         notifyCustomer: form.value.notifyCustomer,
         availableKitchenStaff: form.value.availableKitchenStaff,
         allowDelay: form.value.allowDelay,
+        allowOnlinePayment: form.value.allowOnlinePayment,
       });
       return current !== originalSnapshot.value.settings || staffChanged();
     });
@@ -252,6 +255,7 @@ export default {
           notifyCustomer: form.value.notifyCustomer,
           availableKitchenStaff: form.value.availableKitchenStaff,
           allowDelay: form.value.allowDelay,
+          allowOnlinePayment: form.value.allowOnlinePayment,
         }),
       };
     };
@@ -267,6 +271,7 @@ export default {
           form.value.notifyCustomer = data.notify_customer ?? true;
           form.value.availableKitchenStaff = data.available_kitchen_staff != null ? Number(data.available_kitchen_staff) : 1;
           form.value.allowDelay = data.allow_delay == null ? true : !!Number(data.allow_delay);
+          form.value.allowOnlinePayment = data.allow_online_payment == null ? false : !!Number(data.allow_online_payment);
         }
         await loadStaff();
         snapshot();
@@ -304,6 +309,7 @@ export default {
           notify_customer: form.value.notifyCustomer,
           available_kitchen_staff: form.value.availableKitchenStaff,
           allow_delay: form.value.allowDelay ? 1 : 0,
+          allow_online_payment: form.value.allowOnlinePayment ? 1 : 0,
         });
         toast('Settings saved');
         snapshot();
@@ -324,6 +330,7 @@ export default {
       form.value.notifyCustomer = saved.notifyCustomer;
       form.value.availableKitchenStaff = saved.availableKitchenStaff;
       form.value.allowDelay = saved.allowDelay;
+      form.value.allowOnlinePayment = saved.allowOnlinePayment;
     };
 
     const beginAdd = () => {

@@ -438,12 +438,14 @@ export default {
               myStatus.value = s;
               if (mine.is_priority != null) isPriority.value = Boolean(mine.is_priority);
               if (mine.allow_delay != null) allowDelay.value = !!mine.allow_delay;
-              if (Array.isArray(mine.order_items)) {
+              if (Array.isArray(mine.order_items) && mine.order_items.length) {
                 displayServices.value = mine.order_items.map((it) => ({
                   name: it.name ?? it.item_name ?? 'Service',
                   quantity: Number(it.quantity ?? it.qty ?? 1),
                   price: Number(it.price ?? 0),
                 }));
+              } else if (mine.order_total != null) {
+                displayServices.value = [{ name: 'Total', quantity: 1, price: Number(mine.order_total) }];
               }
               if (String(s).toLowerCase() === 'called') {
                 if (ewtTimer) { clearInterval(ewtTimer); ewtTimer = null; }
@@ -510,7 +512,7 @@ export default {
           if (id && Number(ev.id) !== Number(id) && queue_number == null) return;
           if (queue_number != null && Number(ev.queue_number) !== Number(queue_number) && !id) return;
           if (id && queue_number != null && (Number(ev.id) !== Number(id) && Number(ev.queue_number) !== Number(queue_number))) return;
-          if (Array.isArray(ev.order_items)) {
+          if (Array.isArray(ev.order_items) && ev.order_items.length) {
             displayServices.value = ev.order_items.map((it) => ({
               name: it.name ?? it.item_name ?? 'Service',
               quantity: Number(it.quantity ?? it.qty ?? 1),
@@ -550,12 +552,14 @@ export default {
                 myAhead.value = Number(mine.ahead);
                 if (mine.queue_number != null) displayQueueNo.value = Number(mine.queue_number);
                 if (mine.payment_status) paymentStatus.value = String(mine.payment_status);
-                if (Array.isArray(mine.order_items)) {
+                if (Array.isArray(mine.order_items) && mine.order_items.length) {
                   displayServices.value = mine.order_items.map((it) => ({
                     name: it.name ?? it.item_name ?? 'Service',
                     quantity: Number(it.quantity ?? it.qty ?? 1),
                     price: Number(it.price ?? 0),
                   }));
+                } else if (mine.order_total != null) {
+                  displayServices.value = [{ name: 'Total', quantity: 1, price: Number(mine.order_total) }];
                 }
                 if (next === 'called') {
                   if (ewtTimer) { clearInterval(ewtTimer); ewtTimer = null; }

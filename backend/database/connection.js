@@ -12,7 +12,6 @@ function getPool() {
 	return pool;
 }
 
-// Execute a parameterized query; warn if slow
 async function query(sql, params) {
 	const start = Date.now();
 	const [rows] = await getPool().execute(sql, params);
@@ -23,7 +22,7 @@ async function query(sql, params) {
 	return rows;
 }
 
-// Acquire a dedicated connection from the pool
+//dedicated connection from the pool
 async function getConnection() {
 	return getPool().getConnection();
 }

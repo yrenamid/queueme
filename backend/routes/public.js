@@ -13,7 +13,6 @@ router.get('/customer/:slug', async (req, res) => {
     if (base) {
       return res.redirect(302, `${base}/customer/${encodeURIComponent(slug)}`);
     }
-  // Minimal client-side redirect when SPA base is unknown
     return res.status(200).send(`<!doctype html><meta http-equiv="refresh" content="0;url=/customer/${encodeURIComponent(slug)}"><p>Redirecting…</p>`);
   } catch (e) {
     return res.status(500).send('Server error');
@@ -60,7 +59,7 @@ router.get('/push/enabled', async (req, res) => {
 });
 
 
-// Returns queue summary metrics for a business
+//queue summary metrics 
 router.get('/queue-summary', async (req, res) => {
   try {
     const businessId = Number(req.query.business_id);
@@ -68,9 +67,17 @@ router.get('/queue-summary', async (req, res) => {
 
     let category = null;
     try { const rows = await query('SELECT category FROM businesses WHERE id=?', [businessId]); category = rows[0]?.category ? String(rows[0].category).toLowerCase() : null; } catch(_) {}
+    let includeUnpaid = false;
+    try {
+      const [set] = await query('SELECT allow_online_payment FROM settings WHERE business_id=?', [businessId]);
+      includeUnpaid = !Number(set?.allow_online_payment || 0);
+    } catch(_) {}
     const inQueueRows = (category === 'service')
       ? await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed")', [businessId])
-      : await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed") AND payment_status="paid"', [businessId]);
+      : (includeUnpaid
+          ? await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed")', [businessId])
+          : await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed") AND payment_status="paid"', [businessId])
+        );
     const inQueue = Number(inQueueRows[0]?.inQueue) || 0;
 
     let maxQueueLength = 0;
@@ -91,7 +98,7 @@ router.get('/queue-summary', async (req, res) => {
 });
 
 
-// Lists available menu items for a business
+// Lists available menu items
 router.get('/menu', async (req, res) => {
   try {
     const businessId = Number(req.query.business_id);
@@ -103,7 +110,7 @@ router.get('/menu', async (req, res) => {
 });
 
 
-// Lists available services for a business
+// Lists available services
 router.get('/services', async (req, res) => {
   try {
     const businessId = Number(req.query.business_id);
@@ -185,9 +192,7 @@ router.post('/join', async (req, res) => {
       try { const menuRows = await query('SELECT id, duration_minutes FROM menu_items WHERE business_id=?', [businessId]); menuMap = new Map(menuRows.map(r => [Number(r.id), (r.duration_minutes != null ? Number(r.duration_minutes) : null)])); } catch {}
       try { const svcRows = await query('SELECT id, duration_minutes FROM services WHERE business_id=?', [businessId]); svcMap = new Map(svcRows.map(r => [Number(r.id), (r.duration_minutes != null ? Number(r.duration_minutes) : null)])); } catch {}
 
-      // Parses provided order_items value into an array
       function parseItems(val){ if (!val) return []; if (Array.isArray(val)) return val; try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : []; } catch { return []; } }
-      // Computes per-item duration contribution
       function itemDuration(it){ const q = Math.max(1, Number(it?.quantity || 1)); let per = null; if (it && it.duration != null) per = Number(it.duration); if ((per == null || Number.isNaN(per)) && it && it.id != null) { const idNum = Number(it.id); per = (menuMap.get(idNum) ?? svcMap.get(idNum) ?? null); } if (per == null || !Number.isFinite(per)) per = avgFallback; return Math.max(0, Number(per)) * q; }
 
       const thisItems = parseItems(order_items);
@@ -195,10 +200,8 @@ router.post('/join', async (req, res) => {
   for (const it of thisItems) { thisTotalDuration += itemDuration(it); }
   const staffRaw = Math.max(1, Number(staff || 1));
   const effectiveStaff = 1 + 0.7 * (staffRaw - 1);
-    // Calculates estimated minutes for this order factoring staff
   const thisOrderMinutes = (thisTotalDuration / Math.max(1, effectiveStaff));
   const aheadRows = await query('SELECT status, estimated_wait_time, initial_estimated_wait_time FROM queues WHERE business_id=? AND status IN ("waiting","called","delayed") AND is_priority=0 AND queue_number < ? ORDER BY queue_number ASC', [businessId, nextNumber]);
-      // Uses initial EWT if ahead row is delayed
       const vals = (aheadRows||[]).map(r => {
         const isDelayed = String(r.status || '').toLowerCase() === 'delayed';
         if (isDelayed && r.initial_estimated_wait_time != null) return Math.max(0, Number(r.initial_estimated_wait_time) || 0);
@@ -240,10 +243,17 @@ router.get('/queue-live', async (req, res) => {
 
     let category = null;
     try { const rows = await query('SELECT category FROM businesses WHERE id=?', [businessId]); category = rows[0]?.category ? String(rows[0].category).toLowerCase() : null; } catch(_) {}
-  // Compute in-queue count by business category
+    let includeUnpaidLive = false;
+    try {
+      const [set] = await query('SELECT allow_online_payment FROM settings WHERE business_id=?', [businessId]);
+      includeUnpaidLive = !Number(set?.allow_online_payment || 0);
+    } catch(_) {}
     const inQueueRows = (category === 'service')
       ? await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed")', [businessId])
-      : await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed") AND payment_status="paid"', [businessId]);
+      : (includeUnpaidLive
+          ? await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed")', [businessId])
+          : await query('SELECT COUNT(*) AS inQueue FROM queues WHERE business_id=? AND status IN ("waiting","delayed") AND payment_status="paid"', [businessId])
+        );
     const inQueue = Number(inQueueRows[0]?.inQueue) || 0;
     const nowRows = await query('SELECT MIN(queue_number) AS nowServing FROM queues WHERE business_id=? AND status="called"', [businessId]);
     let nowServing = Number(nowRows[0]?.nowServing) || null;
@@ -325,9 +335,7 @@ router.post('/request-more-time', async (req, res) => {
     const allowed = [2,4,6,8,10];
     if (!businessId || Number.isNaN(businessId)) return res.status(400).json({ success:false, message:'business_id is required' });
     if (!allowed.includes(mins)) return res.status(400).json({ success:false, message:'Invalid minutes' });
-  // Validate id (optional)
     const idNum = (id != null ? Number(id) : null);
-  // Validate queue number (optional)
     const qn = (queue_number != null ? Number(queue_number) : null);
     if ((!idNum || Number.isNaN(idNum)) && (!qn || Number.isNaN(qn))) return res.status(400).json({ success:false, message:'id or queue_number is required' });
 
@@ -340,7 +348,6 @@ router.post('/request-more-time', async (req, res) => {
 
     try {
       const st = await query('SELECT allow_delay FROM settings WHERE business_id=?', [businessId]);
-      // Handles allow
       const allow = (st && st[0] && st[0].allow_delay != null) ? Number(st[0].allow_delay) : 1;
       if (!allow) return res.status(400).json({ success:false, message:'Delay feature is disabled for this business' });
     } catch(_) {  }
@@ -366,9 +373,7 @@ router.post('/pay/initiate', async (req, res) => {
   try {
     const { business_id, id, queue_number } = req.body || {};
     const businessId = Number(business_id);
-  // Validate id (optional)
     const idNum = (id != null ? Number(id) : null);
-  // Validate queue number (optional)
     const qn = (queue_number != null ? Number(queue_number) : null);
     if (!businessId || Number.isNaN(businessId)) return res.status(400).json({ success:false, message:'business_id is required' });
     if ((!idNum || Number.isNaN(idNum)) && (!qn || Number.isNaN(qn))) return res.status(400).json({ success:false, message:'id or queue_number is required' });
@@ -381,7 +386,17 @@ router.post('/pay/initiate', async (req, res) => {
     if (!row) return res.status(404).json({ success:false, message:'Not found' });
 
 
+  // if no API key or business disabled online payments, return 503 without calling PayMongo
   const secretKey = process.env.PAYMONGO_SECRET || '';
+    try {
+      const [st] = await query('SELECT allow_online_payment FROM settings WHERE business_id=?', [businessId]);
+      const allowOnline = Number(st?.allow_online_payment || 0) === 1;
+      if (!secretKey || !allowOnline) {
+        return res.status(503).json({ success:false, message:'Online payments are not available. Please pay at the counter.', code:'PAYMENTS_UNAVAILABLE' });
+      }
+    } catch (_) {
+      if (!secretKey) return res.status(503).json({ success:false, message:'Online payments are not available. Please pay at the counter.', code:'PAYMENTS_UNAVAILABLE' });
+    }
     const baseUrl = process.env.PUBLIC_BASE_URL || process.env.BACKEND_PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
     const amount = Math.max(0, Math.round(Number(row.order_total || 0) * 100)); // centavos
     const successUrl = `${baseUrl}/api/public/pay/success?business_id=${businessId}&id=${row.id}&qn=${row.queue_number}`;
@@ -422,9 +437,7 @@ router.post('/pay/initiate', async (req, res) => {
       return res.json({ success:true, data: { payment_url, amount: Number(row.order_total)||0 } });
     } catch (err) {
       console.error('[public][pay][initiate] PayMongo error:', err?.response?.data || err?.message || err);
-
-      const payment_url = `https://payments.example.com/checkout?biz=${businessId}&q=${row.queue_number}`;
-      return res.json({ success:true, data: { payment_url, amount: Number(row.order_total)||0 } });
+      return res.status(503).json({ success:false, message:'Online payments are not available. Please pay at the counter.', code:'PAYMENTS_UNAVAILABLE' });
     }
   } catch(e){ console.error('[public][pay][initiate]', e); res.status(500).json({ success:false, message:'Server error' }); }
 });
@@ -571,7 +584,7 @@ router.post('/pay/webhook', express.json({ type: 'application/json' }), async (r
     return res.status(200).json({ received: true });
   } catch (e) {
     console.error('[public][pay][webhook]', e);
-    return res.status(200).json({ received: true }); // Avoid retries storm; log for ops
+    return res.status(200).json({ received: true }); 
   }
 });
 
@@ -598,8 +611,10 @@ router.post('/cancel', async (req, res) => {
     if (String(row.payment_status).toLowerCase() === 'paid') {
       return res.status(400).json({ success:false, message:'Cannot cancel a paid order' });
     }
-    if (String(row.status).toLowerCase() !== 'waiting') {
-      return res.status(400).json({ success:false, message:'You can only cancel while waiting' });
+    const st = String(row.status || '').toLowerCase();
+    const cancellable = ['pending','pending_payment','waiting','delayed'];
+    if (!cancellable.includes(st)) {
+      return res.status(400).json({ success:false, message:'You can only cancel before you are called or served' });
     }
     await query('UPDATE queues SET status="cancelled", updated_at = NOW() WHERE id=? AND business_id=?', [row.id, businessId]);
     try {

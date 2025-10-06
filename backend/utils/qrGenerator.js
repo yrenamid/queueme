@@ -1,17 +1,13 @@
-// QR code and slug utilities for business public URLs
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 
 
-// Generate a URL-friendly slug from a name
 function generateSlug(name) {
   return name.toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
     .substring(0, 100);
 }
-
-
-// Build public customer URL for a business
+// public customer URL
 function buildBusinessPublicUrl(baseUrl, slug) {
 
   return `${baseUrl.replace(/\/$/, '')}/customer/${slug}`;
@@ -26,14 +22,14 @@ async function generateBusinessQRCode({ baseUrl, slug, urlOverride }) {
 }
 
 
-// Ensure slug uniqueness by appending random suffixes if needed
+// Ensure slug uniqueness 
 function ensureUniqueSlug(baseSlug, existingChecker) {
   let slug = baseSlug;
   let counter = 0;
   while (existingChecker(slug)) {
     const rand = crypto.randomBytes(2).toString('hex');
     slug = `${baseSlug}-${rand}`;
-    if (++counter > 5) break; // prevent endless loop
+    if (++counter > 5) break; 
   }
   return slug;
 }

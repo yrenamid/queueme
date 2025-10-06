@@ -2,7 +2,7 @@ const { query } = require('../database/connection');
 
 
 
-// API handler: create Feedback
+// create Feedback
 async function createFeedback(req, res) {
   try {
     const { business_id, queue_id, rating, comment } = req.body || {};
@@ -35,12 +35,11 @@ async function createFeedback(req, res) {
 
 
 
-// API handler: get Business Feedback
+//get Business Feedback
 async function getBusinessFeedback(req, res) {
   try {
     const businessIdParam = Number(req.params.businessId);
     const authBiz = Number(req.user?.business_id);
-  // Resolve business id: path parameter must match caller's business
     const bizId = (Number.isInteger(businessIdParam) && businessIdParam > 0) ? businessIdParam : authBiz;
     if (!bizId || bizId !== authBiz) return res.status(403).json({ success:false, message:'Forbidden' });
 

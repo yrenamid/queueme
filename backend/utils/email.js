@@ -1,4 +1,3 @@
-// SendGrid email helper: wraps sgMail with safe defaults and graceful skip
 const sgMail = require('@sendgrid/mail');
 
 
@@ -9,7 +8,7 @@ if (apiKey) {
   console.warn('[email] SENDGRID_API_KEY not set; emails will be skipped');
 }
 
-// Best-effort HTML to plaintext conversion for fallback text
+// HTML to plaintext conversion
 function htmlToText(html) {
   if (!html) return '';
   let s = String(html);
@@ -28,7 +27,7 @@ async function sendEmail({ to, subject, text, html, replyTo, categories }) {
     console.warn('[email] SendGrid not configured; skipping email to', to);
     return { skipped: true };
   }
-  const from = process.env.EMAIL_FROM || 'QueueMe <queueme123@gmail.com>'; //change if there is a domain
+  const from = process.env.EMAIL_FROM || 'QueueMe <queueme123@gmail.com>'; 
   const fromDomain = String(from).split('@').pop()?.replace('>', '').trim().toLowerCase();
   const freeDomains = ['gmail.com','yahoo.com','outlook.com','hotmail.com','live.com'];
   if (fromDomain && freeDomains.includes(fromDomain)) {

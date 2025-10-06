@@ -1,7 +1,7 @@
 const { query } = require('../database/connection');
 
 
-// Normalizes a menu row into API shape
+
 function normalizeRow(r){
   return {
     id: r.id,
@@ -16,7 +16,7 @@ function normalizeRow(r){
 
 
 
-// API handler: list Menu
+// list Menu
 async function listMenu(req, res) {
   try {
     const rows = await query('SELECT id, name, description, price, category, duration_minutes, is_available FROM menu_items WHERE business_id = ? ORDER BY id DESC', [req.user.business_id]);
@@ -26,7 +26,7 @@ async function listMenu(req, res) {
 
 
 
-// API handler: create Menu Item
+// create Menu Item
 async function createMenuItem(req, res) {
   const { name, description, price, category = null, duration, is_available, available } = req.body;
   if (!name || price == null) return res.status(400).json({ success:false, message:'Missing name or price' });
@@ -34,7 +34,6 @@ async function createMenuItem(req, res) {
   if (Number.isNaN(numericPrice)) return res.status(400).json({ success:false, message:'Price must be numeric' });
   const durationMinutes = duration != null ? Number(duration) : null;
   if (durationMinutes != null && Number.isNaN(durationMinutes)) return res.status(400).json({ success:false, message:'Duration must be numeric' });
-  // Accepts both is_available and available flags for compatibility
   const availability = (typeof is_available === 'boolean') ? is_available : (typeof available === 'boolean' ? available : true);
   try {
     const result = await query('INSERT INTO menu_items (business_id,name,description,price,category,duration_minutes,is_available) VALUES (?,?,?,?,?,?,?)', [req.user.business_id, name, description || null, numericPrice, category, durationMinutes, availability]);
@@ -45,14 +44,14 @@ async function createMenuItem(req, res) {
 
 
 
-// API handler: update Menu Item
+//  update Menu Item
 async function updateMenuItem(req, res) {
   const { id } = req.params;
   const { name, description, price, category, duration, is_available, available } = req.body;
   const updates = [];
   const params = [];
 
-  // Helper to build dynamic update SQL
+  // dynamic update SQL
   function push(column, value){ updates.push(`${column} = ?`); params.push(value); }
   if (name !== undefined) push('name', name || null);
   if (description !== undefined) push('description', description || null);
@@ -74,7 +73,7 @@ async function updateMenuItem(req, res) {
 
 
 
-// API handler: delete Menu Item
+// delete Menu Item
 async function deleteMenuItem(req, res) {
   const { id } = req.params;
   try { await query('DELETE FROM menu_items WHERE id=? AND business_id=?', [id, req.user.business_id]); res.json({ success:true, message:'Deleted' }); }

@@ -7,7 +7,7 @@ const API_KEY = process.env.PHILSMS_API_KEY;
 const SENDER_ID = process.env.PHILSMS_SENDER_ID;
 
 
-// Normalize local PH numbers to E.164 (+63...)
+// Normalize local PH numbers 
 function toE164PH(num) {
   if (!num) return null;
   let s = String(num).trim();
@@ -20,7 +20,7 @@ function toE164PH(num) {
 }
 
 
-// Send an SMS via PhilSMS; returns API response or throws
+// Send an SMS via PhilSMS
 async function sendPhilSms(recipientPhone, message) {
   if (!API_KEY || !SENDER_ID) {
     console.warn('[philsms] API not configured; skipping SMS to', recipientPhone);

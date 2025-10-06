@@ -2,7 +2,7 @@ const { query } = require('../database/connection');
 
 
 
-// API handler: get Business Profile
+// get Business Profile
 async function getBusinessProfile(req, res) {
   try {
   const rows = await query('SELECT id,name,email,phone,category,slug,qr_code_url,qr_code_img,max_queue_length,avg_prep_time,settings, created_at FROM businesses WHERE id = ?', [req.user.business_id]);
@@ -16,7 +16,7 @@ async function getBusinessProfile(req, res) {
 
 
 
-// API handler: update Business
+//update Business
 async function updateBusiness(req, res) {
   const { name, phone, max_queue_length, avg_prep_time, settings } = req.body;
   try {
@@ -30,7 +30,7 @@ async function updateBusiness(req, res) {
 
 
 
-// API handler: list Businesses
+// list Businesses
 async function listBusinesses(req, res) {
   try {
     const rows = await query('SELECT id,name,category,slug,qr_code_url FROM businesses ORDER BY created_at DESC LIMIT 100');

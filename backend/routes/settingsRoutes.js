@@ -1,5 +1,5 @@
 
-// Settings routes: get and update business settings
+//get and update business settings
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');

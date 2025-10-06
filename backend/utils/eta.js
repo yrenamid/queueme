@@ -36,14 +36,12 @@ function remainingMinutes(order, avgPrepMin) {
   return Math.max(0, Math.ceil(total - elapsed));
 }
 
-// Compute ETAs with parallel worker timelines; priorities first
+// Compute ETAs. priorities first
 function computeEtas(orders, staffCount = 1, avgPrepMin = 5, opts = {}) {
   const c = Math.max(1, Number(staffCount) || 1);
-  // Handles mode
   const mode = (opts && (opts.mode === 'finish' || opts.mode === 'start')) ? opts.mode : 'start';
   const treatCalledAsBusy = opts.treatCalledAsBusy !== undefined ? !!opts.treatCalledAsBusy : true;
   const currentStatuses = new Set(['pending','waiting','called','delayed']);
-  // Handles filtered
   const filtered = (orders || []).filter(o => currentStatuses.has(String(o.status).toLowerCase()));
 
   const sorted = [...filtered].sort((a, b) => {
@@ -68,33 +66,31 @@ function computeEtas(orders, staffCount = 1, avgPrepMin = 5, opts = {}) {
       workers[i] = rem;
       nowAssigned.push(o.id);
 
-      etaMap.set(o.id, 0); // already called
+      etaMap.set(o.id, 0); 
     }
   } else {
 
-    for (const o of called) etaMap.set(o.id, 0); // do not occupy workers
+    for (const o of called) etaMap.set(o.id, 0);
   }
 
   for (const o of sorted) {
     if (nowAssigned.includes(o.id)) continue;
-  const dur = remainingMinutes(o, avgPrepMin); // duration to occupy
+  const dur = remainingMinutes(o, avgPrepMin);
 
     let wi = 0;
     for (let i = 1; i < c; i++) if (workers[i] < workers[wi]) wi = i;
     const startAt = workers[wi];
     const etaVal = mode === 'finish' ? (startAt + dur) : startAt;
     etaMap.set(o.id, Math.max(0, Math.round(etaVal)));
-    workers[wi] = startAt + dur; // extend chosen worker's timeline
-  }
+    workers[wi] = startAt + dur; 
   return etaMap;
 }
 
 // Simple ETA model with diminishing returns and priority lanes
 function computeEtasFoodSimple(orders, staffCount = 1, avgPrepMin = 5) {
   const Sraw = Math.max(1, Number(staffCount) || 1);
-  const S = 1 + 0.7 * (Sraw - 1); // diminishing returns
+  const S = 1 + 0.7 * (Sraw - 1); 
   const currentStatuses = new Set(['pending','waiting','called','delayed']);
-  // Handles rows
   const rows = (orders || []).filter(o => currentStatuses.has(String(o.status).toLowerCase()));
 
   const sorted = [...rows].sort((a,b) => new Date(a.joined_at || a.created_at || 0) - new Date(b.joined_at || b.created_at || 0));
@@ -121,7 +117,7 @@ function computeEtasFoodSimple(orders, staffCount = 1, avgPrepMin = 5) {
     let workAhead = 0;
     if (o.is_priority) {
       const idx = prioIndex.get(o.id) || 0;
-      workAhead = prioPrefix[idx]; // sum of prio ahead
+      workAhead = prioPrefix[idx]; 
     } else {
       const idx = regIndex.get(o.id) || 0;
       workAhead = prioTotal + regPrefix[idx];
@@ -133,10 +129,10 @@ function computeEtasFoodSimple(orders, staffCount = 1, avgPrepMin = 5) {
   return etaMap;
 }
 
-// Aggregate prep time per order (batched), adjusted by staff
+
 function computeOrderPrepTimeBatch(order, avgPrepMin = 5, staffCount = 1) {
   const Sraw = Math.max(1, Number(staffCount) || 1);
-  const S = 1 + 0.7 * (Sraw - 1); // diminishing returns
+  const S = 1 + 0.7 * (Sraw - 1); 
   const items = safeParseJson(order?.order_items);
   let total = 0;
   if (!items.length) {
@@ -155,7 +151,7 @@ function computeOrderPrepTimeBatch(order, avgPrepMin = 5, staffCount = 1) {
 // Parallel worker ETA model using greedy scheduling
 function computeEtasFoodParallel(orders, staffCount = 1, avgPrepMin = 5) {
   const Sraw = Math.max(1, Number(staffCount) || 1);
-  const S = 1 + 0.7 * (Sraw - 1); // diminishing returns
+  const S = 1 + 0.7 * (Sraw - 1); 
   const rows = Array.isArray(orders) ? orders : [];
   const etaMap = new Map();
 
@@ -196,4 +192,4 @@ function computeEtasFoodParallel(orders, staffCount = 1, avgPrepMin = 5) {
   return etaMap;
 }
 
-module.exports = { computeOrderDurationMinutes, remainingMinutes, computeEtas, computeEtasFoodSimple, computeOrderPrepTimeBatch, computeEtasFoodParallel };
+module.exports = { computeOrderDurationMinutes, remainingMinutes, computeEtas, computeEtasFoodSimple, computeOrderPrepTimeBatch, computeEtasFoodParallel };}

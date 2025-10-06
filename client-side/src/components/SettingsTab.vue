@@ -66,6 +66,19 @@
             :checked="true"
           ></ion-toggle>
         </div>
+        <div class="flex justify-between mb-3">
+          <div>
+            <p>Allow Online Payments</p>
+            <p class="font-light text-xs text-[#FFFFFFB5] mt-1">
+              Enable checkout via PayMongo when configured
+            </p>
+          </div>
+          <ion-toggle
+            v-model="allowOnlinePaymentModel"
+            aria-label="Allow online payments toggle"
+            color="tertiary"
+          ></ion-toggle>
+        </div>
       </div>
     </div>
   </div>
@@ -88,6 +101,7 @@ export default {
   notifyCustomer: Boolean,
     availableKitchenStaff: Number,
     allowDelay: { type: Boolean, default: true },
+    allowOnlinePayment: { type: Boolean, default: false },
   },
   emits: [
     "update:maxQueueLength",
@@ -95,6 +109,7 @@ export default {
   "update:notifyCustomer",
     "update:availableKitchenStaff",
     "update:allowDelay",
+    "update:allowOnlinePayment",
   ],
   // setup: proxy v-model bindings for settings fields; legacy notify kept for compatibility
   setup(props, { emit }) {
@@ -103,6 +118,7 @@ export default {
     const availableStaffModel = computed({ get: () => props.availableKitchenStaff, set: v => emit('update:availableKitchenStaff', Number(v)) });
     const staffLabel = computed(() => 'Active Staff Today');
     const allowDelayModel = computed({ get: () => props.allowDelay, set: v => emit('update:allowDelay', !!v) });
+    const allowOnlinePaymentModel = computed({ get: () => props.allowOnlinePayment, set: v => emit('update:allowOnlinePayment', !!v) });
 
     return {
       maxQueueLengthModel,
@@ -110,6 +126,7 @@ export default {
       availableStaffModel,
       staffLabel,
       allowDelayModel,
+      allowOnlinePaymentModel,
     };
   },
 };

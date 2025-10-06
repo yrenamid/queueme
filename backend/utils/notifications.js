@@ -1,4 +1,4 @@
-// High-level notification helpers (email + PH SMS)
+// notification helpers (email + PH SMS)
 const { sendEmail: sgSendEmail } = require('./email');
 const { sendPhilSms } = require('./philsms');
 
@@ -12,7 +12,7 @@ async function sendSMS({ to, message }) {
   return sendPhilSms(to, message);
 }
 
-// Backward-compat alias
+
 async function sendPhilSMS({ to, message }) {
   return sendPhilSms(to, message);
 }

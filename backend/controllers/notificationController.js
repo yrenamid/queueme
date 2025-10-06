@@ -2,7 +2,7 @@ const { query } = require('../database/connection');
 
 
 
-// API handler: get Notification Settings
+//  get Notification Settings
 async function getNotificationSettings(req, res) {
   try {
   const [row] = await query('SELECT notify_via_email, notify_via_sms, notify_template_email, notify_template_sms FROM settings WHERE business_id=?', [req.user.business_id]);
@@ -16,7 +16,7 @@ async function getNotificationSettings(req, res) {
 
 
 
-// API handler: update Notification Settings
+//  update Notification Settings
 async function updateNotificationSettings(req, res) {
   try {
   let { emailEnabled, smsEnabled, emailTemplate, smsTemplate } = req.body || {};

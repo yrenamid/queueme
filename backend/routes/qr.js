@@ -1,5 +1,5 @@
 
-// QR routes: regenerate customer QR with optional base URL override
+// regenerate customer QR with optional base URL override
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
@@ -14,7 +14,7 @@ router.post('/regenerate', auth, role(['owner','manager']), async (req, res) => 
     if (!bizRows.length) return res.status(404).json({ success:false, message:'Business not found'});
     const slug = bizRows[0].slug;
 
-    // Optional base URL override via body.base_url
+    // Optional base URL override
   const overrideBase = (req.body && req.body.base_url) ? String(req.body.base_url) : '';
   const fullFront = process.env.FRONTEND_URL;
   const fullPublic = process.env.PUBLIC_BASE_URL;
@@ -28,7 +28,6 @@ router.post('/regenerate', auth, role(['owner','manager']), async (req, res) => 
   } else {
     const feHost = process.env.FRONTEND_HOST || req.get('host');
     const fePort = process.env.FRONTEND_PORT || '';
-  // Derive scheme and port when not fully specified
     const scheme = (process.env.FRONTEND_SCHEME || (process.env.FRONTEND_HTTPS === 'true' ? 'https' : 'http'));
     if (fePort && !/\:\d+$/.test(feHost)) {
       baseUrl = `${scheme}://${feHost}:${fePort}`;

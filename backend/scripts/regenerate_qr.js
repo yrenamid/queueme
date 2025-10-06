@@ -6,7 +6,6 @@ const { generateBusinessQRCode } = require('../utils/qrGenerator');
 async function main() {
   try {
     const args = process.argv.slice(2);
-    // Support --base <url> or BASE_URL env
     let baseIdx = args.indexOf('--base');
     let baseUrl = process.env.BASE_URL || '';
     if (baseIdx !== -1 && args[baseIdx + 1]) {

@@ -1,5 +1,5 @@
 
-// Analytics routes: dashboard stats, queue summary, overview, recent activity, and series
+// dashboard stats, queue summary, overview, recent activity, and series
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');

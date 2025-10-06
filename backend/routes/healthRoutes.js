@@ -1,5 +1,3 @@
-
-// Health routes: diagnostics like email test
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
@@ -14,7 +12,7 @@ router.get('/healthz', (req, res) => {
   res.status(200).send('ok');
 });
 
-// Echo endpoint to verify body parsing and headers
+
 router.post('/echo', (req, res) => {
   res.json({
     ok: true,
@@ -39,7 +37,7 @@ router.post('/email-test', auth, role(['owner','manager']), async (req, res) => 
   }
 });
 
-// SMS test endpoint (PhilSMS)
+
 router.post('/sms-test', auth, role(['owner','manager']), async (req, res) => {
   try {
     const { to, message } = req.body || {};
