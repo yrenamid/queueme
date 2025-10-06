@@ -47,8 +47,11 @@ app.use((req,res,next) => {
 // Parsers and request logging
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-app.use(bodyParser.json({ limit: '1mb' })); // keep for compatibility
+app.use(bodyParser.json({ limit: '1mb' })); 
 app.use(morgan('dev'));
+
+// Serve static assets from backend/public 
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Serve built frontend first if available
 const clientDist = path.join(__dirname, '..', 'client-side', 'dist');
@@ -57,10 +60,9 @@ console.log(`[startup] client build present: ${hasClientBuild} at ${clientDist}`
 if (hasClientBuild) {
 	app.use(express.static(clientDist));
 }
-// Serve static assets from backend/public 
+// Serve static assets from backend/public
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-// Mounts API route modules
 app.use('/api/business', require('./routes/businessRoutes'));
 app.use('/api/menu', require('./routes/menuRoutes'));
 app.use('/api/services', require('./routes/serviceRoutes'));
@@ -108,7 +110,6 @@ if (PORT != 5000) {
 	console.log(`[info] Running on non-default port ${PORT}. Update frontend proxy if needed.`);
 }
 
-// Initializes DB pool
 getPool();
 
 // Run schema ensures after server starts
