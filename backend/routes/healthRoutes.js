@@ -4,7 +4,15 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const role = require('../middleware/roleMiddleware');
-const { sendEmail } = require('../utils/notifications');
+const { sendEmail, sendPhilSMS } = require('../utils/notifications');
+
+router.get('/ping', (req, res) => {
+  res.json({ ok: true, ts: Date.now() });
+});
+
+router.get('/healthz', (req, res) => {
+  res.status(200).send('ok');
+});
 
 
 router.post('/email-test', auth, role(['owner','manager']), async (req, res) => {
@@ -23,3 +31,18 @@ router.post('/email-test', auth, role(['owner','manager']), async (req, res) => 
 });
 
 module.exports = router;
+
+// SMS test endpoint (PhilSMS)
+router.post('/sms-test', auth, role(['owner','manager']), async (req, res) => {
+  try {
+    const { to, message } = req.body || {};
+    if (!to) return res.status(400).json({ success: false, message: 'to is required' });
+    const text = message || 'This is a test SMS from QueueMe.';
+    const result = await sendPhilSMS({ to, message: text });
+    if (result?.skipped) return res.status(200).json({ success: true, skipped: true, message: 'PhilSMS not configured; set PHILSMS_* env vars to send real SMS.' });
+    res.json({ success: true, message: 'Test SMS request sent', result });
+  } catch (e) {
+    console.error('[health][sms-test]', e?.response?.data || e?.message || e);
+    res.status(500).json({ success: false, message: 'Failed to send test SMS' });
+  }
+});

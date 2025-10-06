@@ -9,14 +9,11 @@ const realtime = require('./utils/realtime');
 const { ensureSettingsColumns, ensureQueueReadyColumns, ensureQueueWaitingColumn, ensureQueuePartySizeColumn, ensureQueueStatusEnum, ensureMenuColumns, ensureServicesColumns, ensureNotificationSettingsColumns, ensureFeedbackTable, ensureUsersPhoneColumn, ensureQueueInitialEWTColumn } = require('./database/ensureSchema');
 const path = require('path');
 const fs = require('fs');
-
 const app = express();
-// Initializes Express app and CORS settings
 app.set('etag', false);
 app.use(cors({ origin: '*', methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
 
 app.use((req, res, next) => {
-  // Handles CORS preflight responses
 	if (req.method === 'OPTIONS') {
 		res.header('Access-Control-Allow-Origin', '*');
 		res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -27,7 +24,6 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
-  // Disables caching for API responses
 	if (req.originalUrl.startsWith('/api/')) {
 		res.set('Cache-Control', 'no-store');
 		res.set('Pragma', 'no-cache');
@@ -37,17 +33,16 @@ app.use((req, res, next) => {
 });
 
 app.use((req,res,next) => {
-  // Logs basic request info
 	console.log(`[req] ${req.method} ${req.originalUrl}`);
 	next();
 });
-app.use(bodyParser.json({ limit: '1mb' }));
-app.use(morgan('dev'));
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Serves frontend static build if available
+
 const clientDist = path.join(__dirname, '..', 'client-side', 'dist');
 const hasClientBuild = fs.existsSync(clientDist) && fs.existsSync(path.join(clientDist, 'index.html'));
+if (hasClientBuild) {
+	app.use(express.static(clientDist));
+}
 
 // Mounts API route modules
 app.use('/api/business', require('./routes/businessRoutes'));
@@ -64,7 +59,7 @@ app.use('/api/public', require('./routes/public'));
 app.use('/api/qr', require('./routes/qr'));
 app.use('/api/health', require('./routes/healthRoutes'));
 
-// Redirects backend /customer/:slug to the frontend SPA equivalent
+
 app.get('/customer/:slug', (req, res) => {
 	const slug = req.params.slug;
 	if (hasClientBuild) {
@@ -72,9 +67,20 @@ app.get('/customer/:slug', (req, res) => {
 	}
 	const front = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
 	if (front) return res.redirect(302, `${front}/customer/${encodeURIComponent(slug)}`);
-	// Fallback minimal client-side redirect
 	res.status(200).send(`<!doctype html><meta http-equiv="refresh" content="0;url=/customer/${encodeURIComponent(slug)}"><p>Redirecting…</p>`);
 });
+
+
+if (hasClientBuild) {
+  app.get(/^\/(?!api\/).*/, (req, res) => {
+    return res.sendFile(path.join(clientDist, 'index.html'));
+  });
+} else {
+	app.get('/favicon.ico', (req, res) => res.status(204).end());
+	app.get('/', (req, res) => {
+		res.status(200).send('<!doctype html><title>QueueMe API</title><meta name="robots" content="noindex"><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:2rem;line-height:1.5}</style><h1>QueueMe backend is running</h1><p>No frontend build found at <code>client-side/dist</code>.</p><p>API health: <a href="/api/health/healthz">/api/health/healthz</a> | <a href="/api/health/ping">/api/health/ping</a></p>');
+	});
+}
 
 app.use((req,res)=>{ res.status(404).json({ success:false, message:'Not Found'}); });
 
@@ -101,7 +107,6 @@ ensureNotificationSettingsColumns();
 ensureFeedbackTable();
 ensureQueueInitialEWTColumn();
 
-// Starts HTTP server and initializes realtime channel
 const server = http.createServer(app);
 realtime.init(server);
-server.listen(PORT, () => console.log(`QueueMe backend listening on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`QueueMe backend listening on port ${PORT}`));
