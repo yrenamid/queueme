@@ -37,6 +37,10 @@ app.use((req,res,next) => {
 	next();
 });
 
+app.use(bodyParser.json({ limit: '1mb' }));
+app.use(morgan('dev'));
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 const clientDist = path.join(__dirname, '..', 'client-side', 'dist');
 const hasClientBuild = fs.existsSync(clientDist) && fs.existsSync(path.join(clientDist, 'index.html'));
