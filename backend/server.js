@@ -11,6 +11,13 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 app.set('etag', false);
+
+process.on('unhandledRejection', (reason) => {
+	console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+	console.error('[uncaughtException]', err);
+});
 app.use(cors({ origin: '*', methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
 
 app.use((req, res, next) => {
@@ -46,10 +53,11 @@ app.use(morgan('dev'));
 // Serve built frontend first if available
 const clientDist = path.join(__dirname, '..', 'client-side', 'dist');
 const hasClientBuild = fs.existsSync(clientDist) && fs.existsSync(path.join(clientDist, 'index.html'));
+console.log(`[startup] client build present: ${hasClientBuild} at ${clientDist}`);
 if (hasClientBuild) {
 	app.use(express.static(clientDist));
 }
-// Serve static assets from backend/public (e.g., docs, assets) without auto-serving index.html
+// Serve static assets from backend/public 
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Mounts API route modules
@@ -100,21 +108,37 @@ if (PORT != 5000) {
 	console.log(`[info] Running on non-default port ${PORT}. Update frontend proxy if needed.`);
 }
 
-// Initializes DB pool and ensures schema
+// Initializes DB pool
 getPool();
 
-ensureSettingsColumns();
-ensureQueueReadyColumns();
-ensureQueueWaitingColumn();
-ensureQueuePartySizeColumn();
-ensureQueueStatusEnum();
-ensureUsersPhoneColumn();
-ensureMenuColumns();
-ensureServicesColumns();
-ensureNotificationSettingsColumns();
-ensureFeedbackTable();
-ensureQueueInitialEWTColumn();
+// Run schema ensures after server starts
+async function runEnsuresSafe() {
+	const tasks = [
+		['ensureSettingsColumns', ensureSettingsColumns],
+		['ensureQueueReadyColumns', ensureQueueReadyColumns],
+		['ensureQueueWaitingColumn', ensureQueueWaitingColumn],
+		['ensureQueuePartySizeColumn', ensureQueuePartySizeColumn],
+		['ensureQueueStatusEnum', ensureQueueStatusEnum],
+		['ensureUsersPhoneColumn', ensureUsersPhoneColumn],
+		['ensureMenuColumns', ensureMenuColumns],
+		['ensureServicesColumns', ensureServicesColumns],
+		['ensureNotificationSettingsColumns', ensureNotificationSettingsColumns],
+		['ensureFeedbackTable', ensureFeedbackTable],
+		['ensureQueueInitialEWTColumn', ensureQueueInitialEWTColumn],
+	];
+	for (const [name, fn] of tasks) {
+		try {
+			await fn();
+			console.log(`[ensure] ${name}: ok`);
+		} catch (err) {
+			console.error(`[ensure] ${name}: failed`, err?.message || err);
+		}
+	}
+}
 
 const server = http.createServer(app);
 realtime.init(server);
-server.listen(PORT, '0.0.0.0', () => console.log(`QueueMe backend listening on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+	console.log(`QueueMe backend listening on port ${PORT}`);
+	setImmediate(runEnsuresSafe);
+});
