@@ -37,18 +37,20 @@ app.use((req,res,next) => {
 	next();
 });
 
+// Parsers and request logging
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-app.use(bodyParser.json({ limit: '1mb' }));
+app.use(bodyParser.json({ limit: '1mb' })); // keep for compatibility
 app.use(morgan('dev'));
 
-app.use(express.static(path.join(__dirname, 'public')));
-
+// Serve built frontend first if available
 const clientDist = path.join(__dirname, '..', 'client-side', 'dist');
 const hasClientBuild = fs.existsSync(clientDist) && fs.existsSync(path.join(clientDist, 'index.html'));
 if (hasClientBuild) {
 	app.use(express.static(clientDist));
 }
+// Serve static assets from backend/public (e.g., docs, assets) without auto-serving index.html
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Mounts API route modules
 app.use('/api/business', require('./routes/businessRoutes'));

@@ -14,6 +14,15 @@ router.get('/healthz', (req, res) => {
   res.status(200).send('ok');
 });
 
+// Echo endpoint to verify body parsing and headers
+router.post('/echo', (req, res) => {
+  res.json({
+    ok: true,
+    headers: req.headers,
+    body: req.body,
+    contentType: req.get('content-type') || null,
+  });
+});
 
 router.post('/email-test', auth, role(['owner','manager']), async (req, res) => {
   try {
@@ -30,8 +39,6 @@ router.post('/email-test', auth, role(['owner','manager']), async (req, res) => 
   }
 });
 
-module.exports = router;
-
 // SMS test endpoint (PhilSMS)
 router.post('/sms-test', auth, role(['owner','manager']), async (req, res) => {
   try {
@@ -46,3 +53,5 @@ router.post('/sms-test', auth, role(['owner','manager']), async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to send test SMS' });
   }
 });
+
+module.exports = router;

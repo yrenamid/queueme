@@ -6,8 +6,9 @@
     "node": ">=18"
   },
   "scripts": {
-    "postinstall": "npm install --prefix backend && npm install --prefix client-side",
+    "postinstall": "npm install --prefix backend && npm install --prefix client-side --include=dev",
     "build": "npm run build --prefix client-side",
+    "prestart": "npm run build",
     "start": "node backend/server.js"
   }
 }
