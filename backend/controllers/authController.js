@@ -10,7 +10,7 @@ const { normalizePhoneDigits, isPasswordStrong, hasNoInternalSpaces, isNotBlank,
 
 // register Business
 async function registerBusiness(req, res) {
-  const { name, email, phone, password, category, staff = [], max_queue_length, reserve_slots, notify_customer } = req.body;
+  const { name, email, phone, password, category, staff = [], max_queue_length, reserve_slots, notify_customer, available_kitchen_staff, allow_delay, allow_online_payment } = req.body;
   console.log('[registerBusiness] incoming', { name, email, phone, category, staffCount: Array.isArray(staff)? staff.length : 'n/a' });
   if (!name || !email || !phone || !password || !category) {
     return res.status(400).json({ success: false, message: 'Missing required business fields' });
@@ -84,7 +84,21 @@ async function registerBusiness(req, res) {
     const business_id = insertBiz.insertId;
 
 
-  await query('INSERT INTO settings (business_id, reserve_slots, notify_customer) VALUES (?,?,?)', [business_id, reserve_slots || 0, notify_customer !== undefined ? !!notify_customer : true]);
+  try {
+    const { ensureSettingsColumns } = require('../database/ensureSchema');
+    await ensureSettingsColumns();
+  } catch (e) { /* non-fatal */ }
+  await query(
+    'INSERT INTO settings (business_id, reserve_slots, notify_customer, available_kitchen_staff, allow_delay, allow_online_payment) VALUES (?,?,?,?,?,?)',
+    [
+      business_id,
+      reserve_slots || 0,
+      (notify_customer !== undefined ? !!notify_customer : true),
+      (available_kitchen_staff != null ? Number(available_kitchen_staff) : 1),
+      (allow_delay == null ? 1 : (String(allow_delay).toLowerCase() === 'false' || Number(allow_delay) === 0 ? 0 : 1)),
+      (allow_online_payment == null ? 0 : (String(allow_online_payment).toLowerCase() === 'true' || Number(allow_online_payment) === 1 ? 1 : 0))
+    ]
+  );
 
 
     for (let i = 0; i < staff.length; i++) {

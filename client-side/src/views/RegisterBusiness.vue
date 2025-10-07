@@ -2,7 +2,7 @@
   <ion-page>
     <ion-header>
       <ion-toolbar>
-        <div class="flex items-center mx-3">
+        <div class="flex items-center mx-3 cursor-pointer" @click="goHome">
           <img class="h-10 w-10 me-2" src="../images/favicon.png" alt="logo" />
           <p class="name">Queue<span>Me</span></p>
         </div>
@@ -110,7 +110,8 @@ export default {
     const phone = ref('');
     const showSuccess = ref(false);
     const qrImage = ref('');
-    const login = () => router.push('/login');
+  const login = () => router.push('/login');
+  const goHome = () => router.push('/home');
 
     const submitRegistration = async (payloadFromChild) => {
       try {
@@ -128,6 +129,9 @@ export default {
           max_queue_length: Number(payloadFromChild.maxQueueLength ?? payloadFromChild.maxQueueLength) || 50,
           reserve_slots: Number(payloadFromChild.reserveSlots ?? payloadFromChild.reserveSlots) || 0,
           notify_customer: !!payloadFromChild.notifyCustomer,
+          available_kitchen_staff: Number(payloadFromChild.availableKitchenStaff ?? 1) || 1,
+          allow_delay: payloadFromChild.allowDelay === undefined ? 1 : (payloadFromChild.allowDelay ? 1 : 0),
+          allow_online_payment: payloadFromChild.allowOnlinePayment ? 1 : 0,
         };
         const data = await registerBusiness(payload);
         qrImage.value = data.qr_code_img;
@@ -150,7 +154,7 @@ export default {
     };
 
     const goToLogin = () => { showSuccess.value = false; router.replace('/login'); };
-    return { showBusinessForm, step, businessName, businessEmail, businessPassword, businessType, address, phone, login, submitRegistration, showSuccess, qrImage, goToLogin };
+  return { showBusinessForm, step, businessName, businessEmail, businessPassword, businessType, address, phone, login, submitRegistration, showSuccess, qrImage, goToLogin, goHome };
   }
 };
 </script>

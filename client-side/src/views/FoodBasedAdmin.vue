@@ -43,7 +43,7 @@
                   <p class="px-3 py-2 font-bold text-lg text-[#283618]">
                     My Account
                   </p>
-                  <div class="border-b border-t text-[#283618]">
+                  <div v-if="role!=='cashier'" class="border-b border-t text-[#283618]">
                     <ion-button
                       @click="notifications"
                       fill="clear"

@@ -64,6 +64,10 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
     settingsLoading.value = true;
     settingsError.value = null;
     try {
+      if ((role.value || '').toLowerCase() === 'cashier') {
+        settingsSummary.value = null;
+        return;
+      }
       const data = await getSettings();
       settingsSummary.value = {
         maxQueueLength: data.max_queue_length,
@@ -80,7 +84,6 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
   let intervalId: any;
   let summaryTimer: any;
 
-  // Handles updateTime
   function updateTime() {
     currentTime.value = new Date().toLocaleString();
   }
@@ -127,6 +130,7 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
 
   async function refreshOverviewMetrics() {
     try {
+      if ((role.value || '').toLowerCase() === 'cashier') return;
       const m = await apiGetOverviewMetrics();
       overviewMetrics.value = m;
     } catch (e) {
@@ -141,11 +145,15 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
     hydrateRoleFromToken();
     updateTime();
     intervalId = setInterval(updateTime, 1000);
-    loadSettingsSummary();
-
+    const r = (role.value || '').toLowerCase();
+    if (r !== 'cashier') {
+      loadSettingsSummary();
+      refreshOverviewMetrics();
+      summaryTimer = setInterval(() => { refreshQueueSummary(); refreshOverviewMetrics(); }, 20000);
+    } else {
+      summaryTimer = setInterval(() => { refreshQueueSummary(); }, 20000);
+    }
     refreshQueueSummary();
-    refreshOverviewMetrics();
-    summaryTimer = setInterval(() => { refreshQueueSummary(); refreshOverviewMetrics(); }, 20000);
   });
   onBeforeUnmount(() => { clearInterval(intervalId); clearInterval(summaryTimer); });
 

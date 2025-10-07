@@ -31,7 +31,7 @@
           <div v-if="!isServiceBased">
             <ion-label class="text-sm">Service Option</ion-label>
             <div class="text-sm my-2">
-              <ion-radio-group v-model="form.option" @ionBlur="touched.option = true" @ionChange="clearFieldServerError('option')" class="flex items-center gap-5">
+              <ion-radio-group v-model="form.option" color="warning" @ionBlur="touched.option = true" @ionChange="clearFieldServerError('option')" class="flex items-center gap-5">
                 <ion-radio label-placement="end" value="dineIn">Dine In</ion-radio>
                 <ion-radio label-placement="end" value="takeOut">Take Out</ion-radio>
               </ion-radio-group>
@@ -210,11 +210,31 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .add-customer-modal::part(content) {
   max-width: 820px;
   width: 100%;
   max-height: 90vh;
   height: auto;
+}
+
+.add-customer-modal ion-radio::part(container) {
+  border: 2px solid #FEFAE0;
+  width: 18px;
+  height: 18px;
+}
+.add-customer-modal ion-radio.radio-checked::part(container) {
+  background: #DDA15E;
+  border-color: #DDA15E;
+}
+.add-customer-modal ion-radio::part(mark) {
+  background: #283618;
+}
+
+.add-customer-modal ion-toggle {
+  --background: rgba(255,255,255,0.18);
+  --handle-background: #FEFAE0;
+  --background-checked: #DDA15E;
+  --handle-background-checked: #FEFAE0;
 }
 </style>

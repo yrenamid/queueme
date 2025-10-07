@@ -75,7 +75,6 @@ export default {
   },
   emits: ['close', 'called'],
 
-// Initializes component state and handlers
   setup(props, { emit }) {
     const loading = ref(false);
     const submitting = ref(false);
@@ -87,6 +86,8 @@ export default {
 
   const localStarts = ref({}); // 
   const CACHE_KEY = 'callModalLocalStarts';
+  const frozenSeconds = ref({}); 
+  const FROZEN_KEY = 'callModalFrozenSeconds';
 
 
   const loadStartsFromCache = () => {
@@ -108,6 +109,26 @@ export default {
     } catch (err) {
 
       console.debug('[call-modal] saveStartsToCache failed', err);
+    }
+  };
+
+  const loadFrozenFromCache = () => {
+    try {
+      const raw = sessionStorage.getItem(FROZEN_KEY);
+      if (raw) {
+        const obj = JSON.parse(raw);
+        if (obj && typeof obj === 'object') frozenSeconds.value = obj;
+      }
+    } catch (err) {
+      console.debug('[call-modal] loadFrozenFromCache failed', err);
+    }
+  };
+
+  const saveFrozenToCache = () => {
+    try {
+      sessionStorage.setItem(FROZEN_KEY, JSON.stringify(frozenSeconds.value || {}));
+    } catch (err) {
+      console.debug('[call-modal] saveFrozenToCache failed', err);
     }
   };
     let timer;
@@ -154,10 +175,27 @@ export default {
     };
 
 
+    const getRemainingSeconds = (id) => {
+      if (!id) return 0;
+      if (frozenSeconds.value?.[id] != null) return Number(frozenSeconds.value[id]) || 0;
+      const parentBaseline = props.baselines?.[id];
+      if (parentBaseline && parentBaseline.initialEwt != null && parentBaseline.initialStart != null) {
+        const rawMin = Number(parentBaseline.initialEwt) - ((now.value.getTime() - Number(parentBaseline.initialStart)) / 60000);
+        return Math.max(0, Math.ceil(rawMin * 60));
+      }
+      const r = rows.value.find(rr => Number(rr.id) === Number(id));
+      const baseMin = r?.estimated_wait_time != null ? Number(r.estimated_wait_time) : 0;
+      let start = localStarts.value[id];
+      if (!start) {
+        start = Date.now();
+        localStarts.value[id] = start;
+      }
+      const rawMin = baseMin - ((now.value.getTime() - Number(start)) / 60000);
+      return Math.max(0, Math.ceil(rawMin * 60));
+    };
+
     const remainingFor = (row) => {
       if (!row) return '00:00:00';
-      
-
       const toHMS = (s) => {
         const secs = Math.max(0, Math.floor(s));
         const h = Math.floor(secs / 3600);
@@ -166,27 +204,8 @@ export default {
         const pad = (n)=> (n<10?`0${n}`:`${n}`);
         return `${pad(h)}:${pad(m)}:${pad(sec)}`;
       };
-
-
-      const parentBaseline = props.baselines?.[row.id];
-      if (parentBaseline && parentBaseline.initialEwt != null && parentBaseline.initialStart != null) {
-        const raw = Number(parentBaseline.initialEwt) - ((now.value.getTime() - Number(parentBaseline.initialStart)) / 60000);
-        return toHMS(Math.max(0, Math.ceil(raw * 60)));
-      }
-
-
-      const base = row.estimated_wait_time;
-      if (base == null) return '00:00:00';
-      
-      let start = localStarts.value[row.id];
-      if (!start) {
-
-        start = Date.now();
-        localStarts.value[row.id] = start;
-      }
-      
-      const raw = Number(base) - ((now.value.getTime() - Number(start)) / 60000);
-      return toHMS(Math.max(0, Math.ceil(raw * 60)));
+      const secs = getRemainingSeconds(row.id);
+      return toHMS(secs);
     };
 
 
@@ -203,8 +222,21 @@ export default {
           const cap = result.capacity;
           toast(`Capacity: staff=${cap.staff}, in-use=${cap.in_use}, remaining=${cap.remaining}`);
         }
+        try {
+          const ids = updated.map(u => (typeof u === 'number' ? u : Number(u?.id))).filter(Boolean);
+          for (const id of ids) {
+            const idx = rows.value.findIndex(r => Number(r.id) === Number(id));
+            if (idx >= 0) {
+              rows.value[idx] = { ...rows.value[idx], status: 'called' };
+              const freezeSec = getRemainingSeconds(id);
+              frozenSeconds.value[id] = freezeSec;
+              delete localStarts.value[id];
+            }
+          }
+          saveFrozenToCache();
+        } catch (_) { /* ignore */ }
+        selected.value = [];
         emit('called', { updated, skipped });
-        emit('close');
       } catch (e) {
         console.error('[call selected]', e);
         toast(e.message || 'Failed to call selected', 'error');
@@ -221,6 +253,7 @@ export default {
         timer = setInterval(()=> now.value = new Date(), 1000);
 
         loadStartsFromCache();
+        loadFrozenFromCache();
         try {
           connectRealtime();
         } catch (e) {
@@ -232,7 +265,8 @@ export default {
             const id = Number(ev.id);
             if (!id) return;
 
-            if (String(ev.status||'').toLowerCase() === 'delayed') {
+            const status = String(ev.status||'').toLowerCase();
+            if (status === 'delayed') {
               const idx = rows.value.findIndex(r => Number(r.id) === id);
               if (idx >= 0) {
                 const eta = (ev.estimated_wait_time != null ? Number(ev.estimated_wait_time) : rows.value[idx].estimated_wait_time);
@@ -245,6 +279,17 @@ export default {
                   localStarts.value[id] = Date.now();
                 }
               }
+            } else if (status === 'called') {
+              const idx = rows.value.findIndex(r => Number(r.id) === id);
+              if (idx >= 0) {
+                rows.value[idx] = { ...rows.value[idx], status: 'called' };
+                try {
+                  const freezeSec = getRemainingSeconds(id);
+                  frozenSeconds.value[id] = freezeSec;
+                  delete localStarts.value[id];
+                  saveFrozenToCache();
+                } catch (_) { /* ignore */ }
+              }
             }
           });
           offUpdated = onRealtime('queue:updated', (ev) => {
@@ -253,13 +298,15 @@ export default {
             if (!id) return;
             const idx = rows.value.findIndex(r => Number(r.id) === id);
             if (idx >= 0 && ev.estimated_wait_time != null) {
-              rows.value[idx] = { ...rows.value[idx], estimated_wait_time: Number(ev.estimated_wait_time) };
+              if (frozenSeconds.value?.[id] != null || String(rows.value[idx].status).toLowerCase() === 'called') {
+                return;
+              }
+              const newEta = Number(ev.estimated_wait_time);
+              rows.value[idx] = { ...rows.value[idx], estimated_wait_time: newEta };
 
               if (props.baselines?.[id]) {
                 delete localStarts.value[id];
-              } else {
-
-                localStarts.value[id] = Date.now();
+                return;
               }
             }
           });
@@ -287,6 +334,7 @@ export default {
         }
 
         try { saveStartsToCache(); } catch (err) { console.debug('[call-modal] saveStartsToCache failed on close', err); }
+        try { saveFrozenToCache(); } catch (err) { console.debug('[call-modal] saveFrozenToCache failed on close', err); }
       }
     });
     onMounted(() => {
@@ -294,6 +342,7 @@ export default {
       load();
       timer = setInterval(() => (now.value = new Date()), 1000);
       loadStartsFromCache();
+      loadFrozenFromCache();
       try {
         connectRealtime();
       } catch (e) {
@@ -320,6 +369,7 @@ export default {
         offUpdated = null;
       }
       saveStartsToCache();
+      saveFrozenToCache();
     });
 
 

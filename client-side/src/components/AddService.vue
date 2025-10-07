@@ -100,7 +100,6 @@
     props: {
       isOpen: Boolean,
     },
-    // setup: initialize form state and validation
     setup(){
       const form = ref({ name:'', category:null, description:'', price:'', duration:'', available:true });
       const { errors, isValid } = useCatalogItemValidation(form.value, { requireCategory:false, requireDuration:true, minPrice:0, minDuration:1 });
@@ -120,4 +119,12 @@
   };
   </script>
  
-  
+  <style scoped>
+  .custom-modal ion-toggle {
+    --background: rgba(255,255,255,0.18);
+    --handle-background: #FEFAE0;
+    --background-checked: #DDA15E;
+    --handle-background-checked: #FEFAE0;
+  }
+  </style>
+

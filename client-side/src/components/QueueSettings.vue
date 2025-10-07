@@ -85,7 +85,10 @@
       <SettingsTab
         v-model:maxQueueLength="queue.maxQueueLength"
         v-model:reserveSlots="queue.reserveSlots"
-        v-model:notifyPush="queue.notifyCustomer"
+        v-model:notifyCustomer="queue.notifyCustomer"
+        v-model:availableKitchenStaff="queue.availableKitchenStaff"
+        v-model:allowDelay="queue.allowDelay"
+        v-model:allowOnlinePayment="queue.allowOnlinePayment"
       />
     </div>
 
@@ -111,8 +114,8 @@ export default {
       staffList: [],
       editing: true,
       editMode: 'add',
-      staffForm: { tempId: null, name: '', email: '', password: '', role: 'owner' },
-  queue: { maxQueueLength: 50, reserveSlots: 0, notifyCustomer: true },
+    staffForm: { tempId: null, name: '', email: '', password: '', role: 'owner' },
+    queue: { maxQueueLength: 50, reserveSlots: 0, notifyCustomer: true, availableKitchenStaff: 1, allowDelay: true, allowOnlinePayment: false },
       touchedStaff: { name: false, email: false, password: false },
       staffSubmitAttempted: false,
     };
@@ -151,7 +154,10 @@ export default {
         staffList: mappedStaff,
         maxQueueLength: this.queue.maxQueueLength,
         reserveSlots: this.queue.reserveSlots,
-        notifyCustomer: this.queue.notifyCustomer
+        notifyCustomer: this.queue.notifyCustomer,
+        availableKitchenStaff: this.queue.availableKitchenStaff,
+        allowDelay: !!this.queue.allowDelay,
+        allowOnlinePayment: !!this.queue.allowOnlinePayment,
       });
     },
     goBack() { this.$emit('go-back'); }

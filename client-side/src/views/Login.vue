@@ -2,7 +2,7 @@
   <ion-page>
     <ion-header class="border-b border-[#fefae0]">
       <ion-toolbar>
-        <div class="flex items-center mx-3">
+        <div class="flex items-center mx-3 cursor-pointer" @click="goHome">
           <img class="h-10 w-10 me-2" src="../images/favicon.png" alt="logo" />
           <p class="name">{{ businessName || 'Queue' }}<span v-if="!businessName">Me</span><span v-else></span></p>
         </div>
@@ -109,6 +109,7 @@ export default {
     };
   },
   methods: {
+    goHome() { this.router.push('/home'); },
     async handleLogin() {
       if (!this.email || !this.password) {
         const alert = await alertController.create({ header: 'Missing Credentials', message: 'Please enter both email and password.', buttons: ['OK']});
