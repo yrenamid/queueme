@@ -4,7 +4,7 @@
     <p class="text-sm font-light text-gray-500 mt-1">View detailed analytics about your business</p>
 
     <div class="flex flex-wrap items-center gap-3 my-3">
-      <ion-select interface="popover" :value="range" @ionChange="onRangeChange" class="border border-gray-300 h-8 normal-case rounded-sm px-2">
+      <ion-select interface="popover" :value="range" @ionChange="onRangeChange" class="border border-gray-300 h-8 normal-case rounded-sm px-2 w-auto analytics-range-select" style="min-width: 120px;">
         <ion-select-option value="today">Today</ion-select-option>
         <ion-select-option value="week">This Week</ion-select-option>
         <ion-select-option value="month">This Month</ion-select-option>
@@ -222,4 +222,5 @@ canvas {
   width: 90%;
   height: 500px !important;
 }
+.analytics-range-select { max-width: 160px; }
 </style>

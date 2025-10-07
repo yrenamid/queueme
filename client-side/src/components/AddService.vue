@@ -75,7 +75,7 @@
   
           <div class="mb-3 flex items-center gap-3">
             <ion-label class="text-sm">Available</ion-label>
-            <ion-toggle v-model="form.available" />
+            <ion-toggle v-model="form.available" class="modern-toggle" />
           </div>
   
           <ion-button
@@ -120,11 +120,8 @@
   </script>
  
   <style scoped>
-  .custom-modal ion-toggle {
-    --background: rgba(255,255,255,0.18);
-    --handle-background: #FEFAE0;
-    --background-checked: #DDA15E;
-    --handle-background-checked: #FEFAE0;
-  }
+  .custom-modal ion-toggle.modern-toggle { --background: rgba(255,255,255,0.18); --handle-background: #FEFAE0; --background-checked: #DDA15E; --handle-background-checked: #FEFAE0; width: 46px; height: 26px; }
+  .custom-modal ion-toggle.modern-toggle::part(track) { border-radius: 9999px; transition: background-color .2s ease; }
+  .custom-modal ion-toggle.modern-toggle::part(handle) { width: 22px; height: 22px; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: transform .2s ease; }
   </style>
 

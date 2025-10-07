@@ -31,9 +31,9 @@
           <div v-if="!isServiceBased">
             <ion-label class="text-sm">Service Option</ion-label>
             <div class="text-sm my-2">
-              <ion-radio-group v-model="form.option" color="warning" @ionBlur="touched.option = true" @ionChange="clearFieldServerError('option')" class="flex items-center gap-5">
-                <ion-radio label-placement="end" value="dineIn">Dine In</ion-radio>
-                <ion-radio label-placement="end" value="takeOut">Take Out</ion-radio>
+              <ion-radio-group v-model="form.option" color="warning" @ionBlur="touched.option = true" @ionChange="clearFieldServerError('option')" class="flex items-center gap-3">
+                <ion-radio class="option-pill" label-placement="end" value="dineIn">Dine In</ion-radio>
+                <ion-radio class="option-pill" label-placement="end" value="takeOut">Take Out</ion-radio>
               </ion-radio-group>
             </div>
             <p v-if="(touched.option || submitAttempted) && errors.option" class="text-red-600 text-xs mt-1">{{ errors.option }}</p>
@@ -218,18 +218,11 @@ export default {
   height: auto;
 }
 
-.add-customer-modal ion-radio::part(container) {
-  border: 2px solid #FEFAE0;
-  width: 18px;
-  height: 18px;
-}
-.add-customer-modal ion-radio.radio-checked::part(container) {
-  background: #DDA15E;
-  border-color: #DDA15E;
-}
-.add-customer-modal ion-radio::part(mark) {
-  background: #283618;
-}
+.add-customer-modal ion-radio.option-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 9999px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #FEFAE0; }
+.add-customer-modal ion-radio.option-pill.radio-checked { background: #DDA15E; border-color: #DDA15E; color: #283618; }
+.add-customer-modal ion-radio.option-pill::part(container) { border: 2px solid currentColor; width: 16px; height: 16px; }
+.add-customer-modal ion-radio.option-pill.radio-checked::part(container) { background: #FEFAE0; border-color: #FEFAE0; }
+.add-customer-modal ion-radio.option-pill::part(mark) { background: #283618; }
 
 .add-customer-modal ion-toggle {
   --background: rgba(255,255,255,0.18);

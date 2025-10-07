@@ -15,7 +15,7 @@
         </div>
       </div>
 
-      <form @submit.prevent="saveChanges">
+  <form @submit.prevent="saveChanges">
         <div class="mb-3">
           <ion-label class="text-sm">Item Name</ion-label>
           <ion-input
@@ -93,6 +93,11 @@
           ></ion-input>
         </div>
 
+        <div class="mb-3 flex items-center gap-3">
+          <ion-label class="text-sm">Available</ion-label>
+          <ion-toggle v-model="localItem.available" class="modern-toggle" />
+        </div>
+
         
 
         <ion-button
@@ -114,7 +119,8 @@ import {
   IonButton,
   IonSelect,
   IonSelectOption,
-  IonTextarea
+  IonTextarea,
+  IonToggle
 } from "@ionic/vue";
 import { watch, reactive, ref } from "vue";
 import { useCatalogItemValidation } from '@/composables/useCatalogItemValidation';
@@ -128,7 +134,8 @@ export default {
     IonButton,
     IonSelect,
     IonSelectOption,
-    IonTextarea
+    IonTextarea,
+    IonToggle
   },
   props: {
     isOpen: Boolean,
@@ -140,10 +147,10 @@ export default {
   emits: ["close", "update-item"],
 
   setup(props) {
-  const localItem = reactive({ name:'', category:'', description:'', price:'', duration:'' });
+  const localItem = reactive({ name:'', category:'', description:'', price:'', duration:'', available:true });
   const touched = ref({ name: false, category: false, price: false, duration: false });
   const submitAttempted = ref(false);
-    watch(()=> props.item, (val)=> { Object.assign(localItem, val || {}); }, { immediate:true, deep:true });
+    watch(()=> props.item, (val)=> { Object.assign(localItem, val || {}); if (val && typeof val.available !== 'undefined') localItem.available = !!val.available; else if (val && typeof val.is_available !== 'undefined') localItem.available = !!val.is_available; }, { immediate:true, deep:true });
     const { errors, isValid, validate } = useCatalogItemValidation(localItem, { requireCategory:true, requireDuration:true, minPrice:0, minDuration:1 });
     watch(localItem, validate, { deep:true });
     
@@ -156,7 +163,7 @@ export default {
     saveChanges() {
       this.submitAttempted = true;
       if(!this.isValid) return;
-  this.$emit("update-item", { ...this.localItem, price: Number(this.localItem.price), duration: Number(this.localItem.duration) });
+  this.$emit("update-item", { ...this.localItem, price: Number(this.localItem.price), duration: Number(this.localItem.duration), available: !!this.localItem.available });
       this.submitAttempted = false;
       this.touched = { name: false, category: false, price: false, duration: false };
       this.close();
@@ -169,4 +176,7 @@ export default {
 ion-input, ion-textarea, ion-select{
     color: #283618;
 }
+.custom-modal ion-toggle.modern-toggle { --background: rgba(255,255,255,0.18); --handle-background: #FEFAE0; --background-checked: #DDA15E; --handle-background-checked: #FEFAE0; width: 46px; height: 26px; }
+.custom-modal ion-toggle.modern-toggle::part(track) { border-radius: 9999px; transition: background-color .2s ease; }
+.custom-modal ion-toggle.modern-toggle::part(handle) { width: 22px; height: 22px; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: transform .2s ease; }
 </style>
