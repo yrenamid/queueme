@@ -4,7 +4,7 @@
     <p class="text-sm font-light text-gray-500 mt-1">View detailed analytics about your business</p>
 
     <div class="flex flex-wrap items-center gap-3 my-3">
-      <ion-select interface="popover" :value="range" @ionChange="onRangeChange" class="border border-gray-300 h-8 normal-case rounded-sm px-2 w-auto analytics-range-select" style="min-width: 120px;">
+      <ion-select interface="popover" v-model="range" class="border border-gray-300 h-8 normal-case rounded-sm px-2 w-auto analytics-range-select" style="min-width: 120px; --color: #283618; --placeholder-color: #283618; --placeholder-opacity: 1;">
         <ion-select-option value="today">Today</ion-select-option>
         <ion-select-option value="week">This Week</ion-select-option>
         <ion-select-option value="month">This Month</ion-select-option>
@@ -97,7 +97,7 @@
 </template>
 
 <script>
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import { IonCard, IonSelect, IonSelectOption, IonButton } from "@ionic/vue";
 import { Chart, registerables } from "chart.js";
 import api, { getBusinessFeedback } from '@/services/api';
@@ -122,7 +122,6 @@ export default {
     const pagedFeedback = ref([]);
 
     let chart;
-
 
 
     async function fetchSeries() {
@@ -161,7 +160,7 @@ export default {
     }
     
 
-    function onRangeChange(e){ range.value = e.detail.value; fetchSeries(); }
+  watch(() => range.value, () => { fetchSeries(); });
 
     onMounted(async () => {
       await fetchSeries();
@@ -190,8 +189,6 @@ export default {
       pagedFeedback.value = (feedbackList.value || []).slice(start, start + pageSize);
     }
 
-
-
     async function refreshFeedback(){
       if (!businessId) return;
       try {
@@ -204,15 +201,13 @@ export default {
       }
     }
 
-
-
     function goToPage(p){ if (typeof p === 'number') { currentPage.value = p; recalcPagination(); } }
 
     function prevPage(){ if (currentPage.value > 1) { currentPage.value -= 1; recalcPagination(); } }
 
     function nextPage(){ if (currentPage.value < totalPages.value) { currentPage.value += 1; recalcPagination(); } }
 
-    return { range, onRangeChange, dateLabel, feedbackList, feedbackStats, refreshFeedback, pagedFeedback, currentPage, totalPages, goToPage, prevPage, nextPage };
+    return { range, dateLabel, feedbackList, feedbackStats, refreshFeedback, pagedFeedback, currentPage, totalPages, goToPage, prevPage, nextPage };
   },
 };
 </script>
@@ -223,4 +218,14 @@ canvas {
   height: 500px !important;
 }
 .analytics-range-select { max-width: 160px; }
+:deep(ion-popover) { --background: #ffffff; --color: #283618; }
+:deep(ion-popover .select-interface-option) { color: #283618; }
+:deep(ion-popover .select-interface-option::part(text)) { color: #283618; }
+  .analytics-range-select::part(text) { color: #283618; }
+  .analytics-range-select::part(placeholder) { color: #283618; opacity: 1; }
+</style>
+
+<style>
+.analytics-range-select::part(text) { color: #283618 !important; }
+.analytics-range-select::part(placeholder) { color: #283618 !important; opacity: 1 !important; }
 </style>
