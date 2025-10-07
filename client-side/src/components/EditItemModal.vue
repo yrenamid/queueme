@@ -95,7 +95,7 @@
 
         <div class="mb-3 flex items-center gap-3">
           <ion-label class="text-sm">Available</ion-label>
-          <ion-toggle v-model="localItem.available" class="modern-toggle" />
+          <ion-toggle v-model="localItem.available" class="modern-toggle" color="tertiary" />
         </div>
 
         
@@ -176,7 +176,7 @@ export default {
 ion-input, ion-textarea, ion-select{
     color: #283618;
 }
-.custom-modal ion-toggle.modern-toggle { --background: rgba(255,255,255,0.18); --handle-background: #FEFAE0; --background-checked: #DDA15E; --handle-background-checked: #FEFAE0; width: 46px; height: 26px; }
+.custom-modal ion-toggle.modern-toggle { --width: 46px; --height: 26px; --handle-width: 22px; --handle-height: 22px; --handle-box-shadow: 0 1px 2px rgba(0,0,0,0.25); --track-background: rgba(255,255,255,0.18); --track-background-checked: #DDA15E; --background: rgba(255,255,255,0.18); --background-checked: #DDA15E; --handle-background: #FEFAE0; --handle-background-checked: #FEFAE0; }
 .custom-modal ion-toggle.modern-toggle::part(track) { border-radius: 9999px; transition: background-color .2s ease; }
-.custom-modal ion-toggle.modern-toggle::part(handle) { width: 22px; height: 22px; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: transform .2s ease; }
+.custom-modal ion-toggle.modern-toggle::part(handle) { border-radius: 9999px; transition: transform .2s ease; }
 </style>
