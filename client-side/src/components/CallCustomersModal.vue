@@ -85,10 +85,10 @@ export default {
     const { toast } = useToast();
   const now = ref(new Date());
 
-  const localStarts = ref({}); // { [id]: startedAtMs }
+  const localStarts = ref({}); // 
   const CACHE_KEY = 'callModalLocalStarts';
 
-// Handles load Starts From Cache
+
   const loadStartsFromCache = () => {
     try {
       const raw = sessionStorage.getItem(CACHE_KEY);
@@ -102,7 +102,6 @@ export default {
     }
   };
 
-// Handles save Starts To Cache
   const saveStartsToCache = () => {
     try {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(localStarts.value || {}));
@@ -116,7 +115,6 @@ export default {
   let offUpdated;
 
 
-// Handles load
     const load = async () => {
       loading.value = true;
       try {
@@ -149,25 +147,22 @@ export default {
 
     const allSelected = computed(() => filtered.value.length && filtered.value.every(r => selected.value.includes(r.id)));
 
-// Handles toggle All
+
     const toggleAll = (evt) => {
       if (evt.target.checked) selected.value = filtered.value.map(r => r.id);
       else selected.value = [];
     };
 
 
-// Handles remaining For
     const remainingFor = (row) => {
       if (!row) return '00:00:00';
       
 
-// Handles to HMS
       const toHMS = (s) => {
         const secs = Math.max(0, Math.floor(s));
         const h = Math.floor(secs / 3600);
         const m = Math.floor((secs % 3600) / 60);
         const sec = secs % 60;
-        // Handles pad
         const pad = (n)=> (n<10?`0${n}`:`${n}`);
         return `${pad(h)}:${pad(m)}:${pad(sec)}`;
       };
@@ -195,7 +190,6 @@ export default {
     };
 
 
-    // Handles submit
     const submit = async () => {
       if (!selected.value.length) return;
       submitting.value = true;
@@ -230,7 +224,7 @@ export default {
         try {
           connectRealtime();
         } catch (e) {
-
+          console.debug('[call-modal] realtime connect failed (open watcher)', e);
         }
         try {
           offStatus = onRealtime('queue:status', (ev) => {
@@ -241,7 +235,6 @@ export default {
             if (String(ev.status||'').toLowerCase() === 'delayed') {
               const idx = rows.value.findIndex(r => Number(r.id) === id);
               if (idx >= 0) {
-                // Handles eta
                 const eta = (ev.estimated_wait_time != null ? Number(ev.estimated_wait_time) : rows.value[idx].estimated_wait_time);
                 rows.value[idx] = { ...rows.value[idx], status: 'delayed', estimated_wait_time: eta };
 
@@ -280,7 +273,7 @@ export default {
           try {
             offStatus();
           } catch (e) {
-
+            console.debug('[call-modal] offStatus cleanup failed', e);
           }
           offStatus = null;
         }
@@ -288,7 +281,7 @@ export default {
           try {
             offUpdated();
           } catch (e) {
-
+            console.debug('[call-modal] offUpdated cleanup failed', e);
           }
           offUpdated = null;
         }
@@ -314,7 +307,7 @@ export default {
         try {
           offStatus();
         } catch (e) {
-
+          console.debug('[call-modal] offStatus cleanup failed (unmount)', e);
         }
         offStatus = null;
       }
@@ -322,7 +315,7 @@ export default {
         try {
           offUpdated();
         } catch (e) {
-
+          console.debug('[call-modal] offUpdated cleanup failed (unmount)', e);
         }
         offUpdated = null;
       }

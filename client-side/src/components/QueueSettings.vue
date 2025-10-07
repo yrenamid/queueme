@@ -105,7 +105,6 @@ export default {
   name: "QueueSettings",
   components: { IonButton, IonSegment, IonSegmentButton, IonLabel, SettingsTab },
   props: {},
-  // data+methods: manage initial staff entries and basic queue settings; emits registration payload
   data() {
     return {
       activeTab: 'staff',
@@ -169,7 +168,7 @@ export default {
       return e;
     },
     canComplete() {
-      return this.queue.maxQueueLength > 0; // owner auto-created from first step
+      return this.queue.maxQueueLength > 0; 
     }
   }
 };

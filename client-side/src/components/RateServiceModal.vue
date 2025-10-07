@@ -55,7 +55,7 @@
 </template>
 
 <script>
-// Modal to collect a 1–5 star rating and optional comment; resolves business/queue IDs and posts feedback.
+// Modal to collect a 1–5 star rating and optional comment
 import { IonButton, IonModal, IonTextarea } from "@ionic/vue";
 import { ref, computed } from "vue";
 import { useRoute } from 'vue-router';
@@ -108,17 +108,14 @@ export default {
     });
 
 
-// Handles close Modal
     const closeModal = () => {
       emit("close");
     };
 
-// Handles set Rating
     const setRating = (value) => {
       rating.value = value;
     };
 
-    // Handles submitRating
     const submitRating = async () => {
       try {
         if (isSubmitting.value) return;
@@ -178,6 +175,6 @@ export default {
   margin: auto;
   overflow-y: auto;
   box-sizing: border-box;
-  background: #FEFAE0; /* Cream background per request */
+  background: #FEFAE0; 
 }
 </style>

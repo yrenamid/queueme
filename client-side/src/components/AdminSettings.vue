@@ -166,7 +166,6 @@ export default {
   name: 'AdminSettings',
   components: { IonModal, IonButton, IonSegment, IonSegmentButton, IonLabel, SettingsTab },
   props: { isOpen: { type: Boolean, default: false } },
-  // setup: load/update queue settings and manage staff list with validation and toasts
   setup(props, { emit }) {
     const role = ref(typeof window !== 'undefined' ? (localStorage.getItem('role') || '') : '');
     const isOwner = computed(() => role.value === 'owner');
@@ -198,7 +197,7 @@ export default {
     });
 
     const editing = ref(false);
-    const editMode = ref('add'); // 'add' | 'edit'
+    const editMode = ref('add'); 
     const staffForm = ref({ id: null, name: '', email: '', password: '', phone: '', role: 'cashier' });
     const staffSubmitting = ref(false);
     const staffMessage = ref('');
@@ -232,7 +231,7 @@ export default {
       return Object.values(staffValidationErrors.value).every((v) => !v);
     });
 
-  const staffChanged = () => false; // placeholder for staff diffing
+  const staffChanged = () => false; 
 
     const dirty = computed(() => {
       if (!originalSnapshot.value) return false;
@@ -482,27 +481,26 @@ export default {
 </script>
 
 <style scoped>
-/* Role dropdown theme: collapsed uses dark panel with white text; focus/expanded flips to light with dark text */
 .role-select {
   appearance: none;
-  background-color: rgba(255, 255, 255, 0.08); /* bg-white/10 */
+  background-color: rgba(255, 255, 255, 0.08); 
   color: #fff;
 }
 .role-select:focus {
   background-color: #fff;
-  color: #283618; /* dark text matching theme background */
+  color: #283618;
   outline: none;
 }
 .role-select option {
-  color: #283618; /* ensure readable on light dropdown panel */
-  background: #fff; /* light option background for contrast */
+  color: #283618; 
+  background: #fff; 
 }
 .role-select option:checked {
-  background: #DDA15E; /* orange highlight */
-  color: #1f2937; /* dark gray text on orange for readability */
+  background: #DDA15E; 
+  color: #1f2937;
 }
 .role-select option:hover {
-  background: #F1D1A2; /* lighter orange on hover */
+  background: #F1D1A2; 
   color: #1f2937;
 }
 

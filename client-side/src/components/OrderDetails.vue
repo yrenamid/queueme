@@ -165,7 +165,6 @@ export default {
     isServiceBased: { type: Boolean, default: false }
   },
   emits: ["close", "update-customer", "status-changed"],
-  // setup: compute totals, payment state, editing and time-based remaining ETA
   setup(props, { emit }) {
   const showEditCustomer = ref(false);
   const paymentApproved = ref(false);
@@ -184,26 +183,20 @@ export default {
     });
 
 
-// Handles format Currency
     const formatCurrency = (value) => {
       if (value === undefined || value === null) return "₱0.00";
       return "₱" + Number(value).toFixed(2);
     };
 
-
-// Handles handle Show Edit Customer
     const handleShowEditCustomer = () => {
       selectedCustomer.value = props.order;
       showEditCustomer.value = true;
     };
 
 
-    // Handles updateCustomer
     const updateCustomer = async (updateCustomer) => {
       try {
         if (props.order && props.order.id) {
-
-          // Handles order_items
           const order_items = (updateCustomer.menuItems || []).map(i => ({ id: i.id, name: i.name, price: Number(i.price), quantity: Number(i.quantity)||1, duration: i.duration != null ? Number(i.duration) : undefined }));
           const order_total = order_items.reduce((s,i)=> s + Number(i.price)*(Number(i.quantity)||1), 0);
           await updateQueueDetails(props.order.id, {
@@ -251,29 +244,25 @@ export default {
     });
 
 
-// Handles remaining For
     const remainingFor = (row) => {
       if (!row) return '00:00:00';
 
       if (typeof row.frozenWaitSeconds === 'number') {
         const fs = Math.max(0, Math.floor(row.frozenWaitSeconds));
         const h = Math.floor(fs / 3600), m = Math.floor((fs % 3600) / 60), s = fs % 60;
-        // Handles pad
         const pad = (n)=> (n<10?`0${n}`:`${n}`);
         return `${pad(h)}:${pad(m)}:${pad(s)}`;
       }
-      // Handles base
       const base = (row.initialEwt != null ? Number(row.initialEwt) : (typeof row.etaBase === 'number' ? row.etaBase : null));
       const start = Number(row.initialStart || 0);
       if (base == null) return '00:00:00';
 
-// Handles to HMS
+
       const toHMS = (s) => {
         const secs = Math.max(0, Math.floor(s));
         const h = Math.floor(secs / 3600);
         const m = Math.floor((secs % 3600) / 60);
         const sec = secs % 60;
-        // Handles pad
         const pad = (n)=> (n<10?`0${n}`:`${n}`);
         return `${pad(h)}:${pad(m)}:${pad(sec)}`;
       };

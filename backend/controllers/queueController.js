@@ -436,7 +436,6 @@ async function updateQueueStatus(req, res) {
 
             .replace(/\{\{\s*customer_name\s*\}\}/gi, context.customer_name)
             .replace(/\{\{\s*queue_number\s*\}\}/gi, String(context.queue_number))
-// update Queue Details
             .replace(/\{\s*customer_name\s*\}/gi, context.customer_name)
             .replace(/\{\s*queue_number\s*\}/gi, String(context.queue_number));
         };
@@ -659,8 +658,11 @@ async function callSelectedCustomers(req, res) {
 
 
     try {
+      const rows = await query(`SELECT id, queue_number, estimated_wait_time, payment_status FROM queues WHERE business_id=? AND id IN (${toUpdate.map(()=>'?').join(',')})`, [req.user.business_id, ...toUpdate]);
+      const map = new Map(rows.map(r => [Number(r.id), r]));
       toUpdate.forEach((id) => {
-        try { broadcast('queue:status', { id, status: 'called', business_id: req.user.business_id }); } catch {}
+        const r = map.get(Number(id));
+        try { broadcast('queue:status', { id: Number(id), status: 'called', business_id: req.user.business_id, queue_number: r?.queue_number, estimated_wait_time: r?.estimated_wait_time, payment_status: r?.payment_status }); } catch {}
       });
     } catch {}
 
@@ -672,7 +674,7 @@ async function callSelectedCustomers(req, res) {
         const rows = await query(`SELECT id, customer_name, customer_email, customer_phone, queue_number FROM queues WHERE business_id=? AND id IN (${idsForNotify.map(()=>'?').join(',')})`, [req.user.business_id, ...idsForNotify]);
         for (const r of rows) {
           const context = { customer_name: r.customer_name || 'Customer', queue_number: r.queue_number || '-', business_id: req.user.business_id };
-          // basic template
+          //template
           const render = (tpl, fallback) => String(tpl || fallback)
             .replace(/\{\{\s*customer_name\s*\}\}/gi, context.customer_name)
             .replace(/\{\{\s*queue_number\s*\}\}/gi, String(context.queue_number))

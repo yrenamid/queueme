@@ -320,11 +320,9 @@ export default{
     settingsSummary: { type: Object, default: null }
   },
   emits: ['summary','baselines'],
-  // setup: state, realtime bindings, pagination and actions for current/completed/cancelled queues
   setup(props, { emit }) {
   const { toast } = useToast();
 
-  // Handles savedTab
   const savedTab = (typeof window !== 'undefined') ? localStorage.getItem('overviewActiveTab') : null;
   const customerTab = ref(savedTab === 'completed' || savedTab === 'cancelled' ? savedTab : 'current');
   const showAddCustomer = ref(false);
@@ -343,27 +341,25 @@ export default{
   const customerInfo = ref([])
 
 
-  const pinnedMap = new Map(); // id -> { rowSnapshot, expiresAtMs }
+  const pinnedMap = new Map(); 
 
-  const lastActiveMap = new Map(); // id -> { rowSnapshot, lastSeenMs }
-  const ACTIVE_LEASE_MS = 120000; // 2 minutes lease
+  const lastActiveMap = new Map(); 
+  const ACTIVE_LEASE_MS = 120000; 
 
   const PAGE_SIZE = 5
   const currentPageCurrent = ref(1)
   const currentPageCompleted = ref(1)
   const currentPageCancelled = ref(1)
 
-  // Handles businessId
+
   const businessId = (typeof window !== 'undefined') ? localStorage.getItem('businessId') : null;
   const CACHE_KEY = `currentQueueCache:${businessId || 'anon'}`;
 
-// Handles load Cache
   function loadCache(){
     try { const raw = sessionStorage.getItem(CACHE_KEY); if (raw) customerInfo.value = JSON.parse(raw) || []; }
     catch (e) { console.debug('[overview] cache load skipped', e); }
   }
 
-// Handles save Cache
   function saveCache(){
     try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(customerInfo.value || [])); }
     catch (e) { console.debug('[overview] cache save skipped', e); }
@@ -375,7 +371,6 @@ export default{
   let pollTimer = null
   let completing = false
 
-// Handles is Serve Disabled
   const isServeDisabled = (row) => {
     const s = String(row?.status || '').toLowerCase();
 
@@ -387,9 +382,9 @@ export default{
 
 
     const catalog = useCatalog(props.isServiceBased ? 'service' : 'food');
-    const menuItems = catalog.items; // reactive list from API
+    const menuItems = catalog.items; 
 
-// Handles to Items Array
+
     function toItemsArray(val) {
       if (Array.isArray(val)) return val;
       if (typeof val === 'string') {
@@ -399,23 +394,19 @@ export default{
       return [];
     }
 
-// Handles load Current
+
     async function loadCurrent() {
   const rows = await apiListQueue({ status: ['pending','waiting','called','pending_payment','delayed'] });
       try {
         const prevMap = new Map((customerInfo.value || []).map(c => [c.id, c]))
-          // Handles mapped
           const mapped = (rows || []).map((r) => {
-          // Handles etaBase
           const etaBase = (r.estimated_wait_time != null && !isNaN(Number(r.estimated_wait_time))) ? Number(r.estimated_wait_time) : null;
-            // Handles statusLabel
             const statusLabel = (r.status === 'called' ? 'In Progress' : r.status === 'waiting' ? 'Waiting' : r.status === 'pending_payment' ? 'Pending Payment' : r.status === 'delayed' ? 'Delayed' : r.status === 'pending' ? 'Pending' : r.status);
           const prev = prevMap.get(r.id);
 
           let initialEwt = (etaBase != null ? etaBase : null);
           const stLower = String(statusLabel).toLowerCase();
 
-          // Handles canTickNow
           const canTickNow = ((stLower === 'waiting') || (stLower === 'delayed')) && (props.isServiceBased ? true : (String(r.payment_status).toLowerCase() === 'paid'));
           let initialStart = canTickNow ? Date.now() : null;
 
@@ -424,7 +415,6 @@ export default{
             const prevStatus = String(prev.status || '').toLowerCase();
             const currStatus = String(statusLabel || '').toLowerCase();
             const sameStatus = prevStatus === currStatus;
-            // Handles prevCanTick
             const prevCanTick = ((prevStatus === 'waiting') || (prevStatus === 'delayed')) && (props.isServiceBased ? true : !!prev.paid);
 
             if (sameStatus && prev.initialEwt != null && (etaBase == null || Number(prev.initialEwt) === Number(etaBase))) {
@@ -440,7 +430,6 @@ export default{
                 if (typeof prev.frozenWaitSeconds === 'number') {
                   frozenWaitSeconds = Math.max(0, Math.round(prev.frozenWaitSeconds));
                 } else if (prev.initialEwt != null && prev.initialStart != null && prevCanTick) {
-                  // Handles elapsedMin
                   const elapsedMin = (Date.now() - Number(prev.initialStart)) / 60000;
                   const remSec = Math.max(0, Math.ceil((Number(prev.initialEwt) - elapsedMin) * 60));
                   frozenWaitSeconds = remSec;
@@ -529,9 +518,7 @@ export default{
           try {
             if (showOrderDetails.value && selectedOrder.value) {
               const cur = selectedOrder.value;
-              // Handles byId
               const byId = (cur.id != null) ? customerInfo.value.find(c => c.id === cur.id) : null;
-              // Handles byQn
               const byQn = (!byId && cur.queueNo) ? customerInfo.value.find(c => c.queueNo === cur.queueNo) : null;
               const updated = byId || byQn;
               if (updated) selectedOrder.value = updated;
@@ -546,10 +533,9 @@ export default{
       }
     }
 
-// Handles load Served
+
     async function loadServed() {
   const served = await apiListQueue({ status: 'served' });
-      // Handles servedMapped
       const servedMapped = (served || []).map(r => ({
         id: r.id,
         queueNo: String(r.queue_number).padStart(4, '0'),
@@ -569,10 +555,9 @@ export default{
       }
     }
 
-// Handles load Cancelled
+
     async function loadCancelled() {
   const canc = await apiListQueue({ status: 'cancelled' });
-      // Handles cancelledMapped
       const cancelledMapped = (canc || []).map(r => ({
         id: r.id,
         queueNo: String(r.queue_number).padStart(4, '0'),
@@ -621,17 +606,12 @@ export default{
   const rows = await apiListQueue({ status: ['pending','waiting','called','pending_payment','delayed'] });
         try {
           const prevMap = new Map((customerInfo.value || []).map(c => [c.id, c]))
-          // Handles mappedRows
           const mappedRows = (rows || []).map((r) => {
-            // Handles etaBase
             const etaBase = (r.estimated_wait_time != null && !isNaN(Number(r.estimated_wait_time))) ? Number(r.estimated_wait_time) : null;
-            // Handles statusLabel
             const statusLabel = (r.status === 'called' ? 'In Progress' : r.status === 'waiting' ? 'Waiting' : r.status === 'delayed' ? 'Delayed' : r.status === 'pending' ? 'Pending' : r.status);
             const prev = prevMap.get(r.id);
-
             let initialEwt = (etaBase != null ? etaBase : null);
             const stLower = String(statusLabel).toLowerCase();
-            // Handles canTickNow
             const canTickNow = ((stLower === 'waiting') || (stLower === 'delayed')) && (props.isServiceBased ? true : (String(r.payment_status).toLowerCase() === 'paid'));
             let initialStart = canTickNow ? Date.now() : null;
             let frozenWaitSeconds = null;
@@ -639,7 +619,7 @@ export default{
               const prevStatus = String(prev.status || '').toLowerCase();
               const currStatus = String(statusLabel || '').toLowerCase();
               const sameStatus = prevStatus === currStatus;
-              // Handles prevCanTick
+
               const prevCanTick = ((prevStatus === 'waiting') || (prevStatus === 'delayed')) && (props.isServiceBased ? true : !!prev.paid);
               if (sameStatus && prev.initialEwt != null && (etaBase == null || Number(prev.initialEwt) === Number(etaBase))) {
                 initialEwt = prev.initialEwt;
@@ -652,7 +632,6 @@ export default{
                 if (typeof prev.frozenWaitSeconds === 'number') {
                   frozenWaitSeconds = Math.max(0, Math.round(prev.frozenWaitSeconds));
                 } else if (prev.initialEwt != null && prev.initialStart != null && prevCanTick) {
-                  // Handles elapsedMin
                   const elapsedMin = (Date.now() - Number(prev.initialStart)) / 60000;
                   const remSec = Math.max(0, Math.ceil((Number(prev.initialEwt) - elapsedMin) * 60));
                   frozenWaitSeconds = remSec;
@@ -712,7 +691,6 @@ export default{
 
         try {
           const served = await apiListQueue({ status: 'served' });
-          // Handles servedMapped
           const servedMapped = (served || []).map(r => ({
             id: r.id,
             queueNo: String(r.queue_number).padStart(4, '0'),
@@ -729,7 +707,6 @@ export default{
 
         try {
           const canc = await apiListQueue({ status: 'cancelled' });
-          // Handles cancelledMapped
           const cancelledMapped = (canc || []).map(r => ({
             id: r.id,
             queueNo: String(r.queue_number).padStart(4, '0'),
@@ -747,7 +724,6 @@ export default{
 
       try { connectRealtime(); } catch (e) { console.debug('[overview] realtime connect skipped', e); }
 
-// Handles refresh All
       const refreshAll = async () => {
         try { await loadCurrent(); } catch (e) { console.debug('[overview] loadCurrent refresh failed', e); }
         try { await loadServed(); } catch (e) { console.debug('[overview] loadServed refresh failed', e); }
@@ -765,7 +741,6 @@ export default{
             } else {
               const newId = payload && payload.id != null ? Number(payload.id) : null;
               const newQn = payload && payload.queue_number != null ? String(payload.queue_number).padStart(4, '0') : null;
-              // Handles exists
               const exists = (customerInfo.value || []).some((c) => (newId != null && c.id === newId) || (newQn && c.queueNo === newQn));
               if (!exists) {
 
@@ -807,11 +782,9 @@ export default{
           if (bizIdStr && evtBizStr && bizIdStr !== evtBizStr) return;
 
           if (String(payload.status||'').toLowerCase() === 'delayed') {
-            // Handles idx
             const idx = (customerInfo.value||[]).findIndex(c => c.id === Number(payload.id));
             if (idx >= 0) {
               const row = customerInfo.value[idx];
-              // Handles newEta
               const newEta = (payload.estimated_wait_time!=null?Number(payload.estimated_wait_time):row.etaBase);
               const paid = row.paid || String(payload.payment_status||'').toLowerCase() === 'paid';
               customerInfo.value[idx] = {
@@ -849,7 +822,7 @@ export default{
             }
           } else if (String(payload.status||'').toLowerCase() === 'called') {
 
-            // Handles idx
+
             const idx = (customerInfo.value||[]).findIndex(c => c.id === Number(payload.id));
             if (idx >= 0) {
               const row = customerInfo.value[idx];
@@ -858,7 +831,6 @@ export default{
 
                 const canTick = props.isServiceBased ? true : !!row.paid;
                 if (row.initialEwt != null && row.initialStart != null && canTick) {
-                  // Handles elapsedMin
                   const elapsedMin = (Date.now() - Number(row.initialStart)) / 60000;
                   frozen = Math.max(0, Math.ceil((Number(row.initialEwt) - elapsedMin) * 60));
                 } else if (row.etaBase != null) {
@@ -891,13 +863,11 @@ export default{
         if (bizIdStr && evtBizStr && bizIdStr !== evtBizStr) return;
         const idNum = Number(ev.id);
         if (!idNum) return;
-        // Handles idx
         const idx = (customerInfo.value || []).findIndex(c => c.id === idNum);
         if (idx >= 0 && ev.estimated_wait_time != null) {
           const row = customerInfo.value[idx];
           const eta = Number(ev.estimated_wait_time);
           const st = String(row.status || '').toLowerCase();
-          // Handles canTick
           const canTick = ((st === 'waiting') || (st === 'delayed')) && (props.isServiceBased ? true : !!row.paid);
           customerInfo.value[idx] = {
             ...row,
@@ -957,10 +927,9 @@ export default{
 
 
 
-// Handles remaining Seconds
+
   const remainingSeconds = (row) => {
     if (!row) return 0;
-    // Handles base
     const base = (row.initialEwt != null ? Number(row.initialEwt) : (typeof row.etaBase === 'number' ? row.etaBase : null));
     if (base == null) return 0;
 
@@ -975,46 +944,40 @@ export default{
     if (typeof row.frozenWaitSeconds === 'number') return Math.max(0, Math.round(row.frozenWaitSeconds));
     return Math.max(0, Math.round(Number(base) * 60));
   };
-  // Handles remainingFor
+
   const remainingFor = (row) => formatHMS(remainingSeconds(row));
 
 
 
-// Handles is Today Date
+
   function isTodayDate(d) {
     if (!d) return false;
-    // Handles dt
     const dt = (d instanceof Date) ? d : new Date(d);
     if (isNaN(dt.getTime())) return false;
     const nd = new Date();
     return dt.getFullYear() === nd.getFullYear() && dt.getMonth() === nd.getMonth() && dt.getDate() === nd.getDate();
   }
 
-// Handles build Summary
+
   function buildSummary() {
 
-    // Handles waiting
     const waiting = (customerInfo.value || []).filter(c => String(c.status).toLowerCase() === 'waiting');
     const waitsSec = waiting.map(remainingSeconds).filter(v => typeof v === 'number' && !isNaN(v));
     const avgSec = waitsSec.length ? Math.round(waitsSec.reduce((a,b)=>a+b,0) / waitsSec.length) : 0;
 
     const avgWait = Math.round(avgSec / 60);
-    // Handles completedToday
     const completedToday = (completedCustomer.value || []).filter(c => isTodayDate(c.completedAt)).length;
-    // Handles cancelledToday
     const cancelledToday = (cancelledCustomer.value || []).filter(c => isTodayDate(c.completedAt)).length;
-    // Handles waitingPaid
     const waitingPaid = (customerInfo.value || []).filter(c => (String(c.status).toLowerCase() === 'waiting') && !!c.paid).length;
 
     const totalCustomers = completedToday + cancelledToday;
     return { totalCustomers, avgWait, completedToday, cancelledToday, waitingPaid };
   }
 
-// Handles emit Summary
+
   function emitSummary() { try { emit('summary', buildSummary()) } catch (_) { console.debug('[overview] summary emit skipped'); } }
 
 
-// Handles build Baselines
   function buildBaselines() {
     const map = {};
     for (const row of (customerInfo.value || [])) {
@@ -1024,7 +987,7 @@ export default{
     return map;
   }
 
-// Handles emit Baselines
+
   function emitBaselines() { try { emit('baselines', buildBaselines()) } catch (_) { console.debug('[overview] baselines emit skipped'); } }
 
 
@@ -1039,11 +1002,10 @@ export default{
   watch(now, emitSummary)
 
 
-  // Handles addCustomer
+
   const addCustomer = async (form) => {
 
     const durationMap = new Map((menuItems.value || []).map(m => [m.id, (m.duration != null ? Number(m.duration) : null)]));
-    // Handles order_items
     const order_items = (form.selectedItems || []).map((i) => ({
       id: i.id,
       name: i.name,
@@ -1066,7 +1028,7 @@ export default{
       });
 
       const qnStr = String(result.queue_number).padStart(4, '0');
-      // Handles dup
+
       const dup = (customerInfo.value || []).some(c => (c.id && c.id === result.id) || (c.queueNo && c.queueNo === qnStr));
       if (!dup) customerInfo.value.unshift({
         id: result.id,
@@ -1092,10 +1054,9 @@ export default{
   try { saveCache(); }
   catch (e) { console.debug('[overview] cache write skipped', e); }
       toast('Customer added successfully');
-      showAddCustomer.value = false; // Close modal only on success
+      showAddCustomer.value = false; 
     } catch (e) {
 
-      // Handles apiMsg
       const apiMsg = (e && e.response && e.response.data && (e.response.data.message || e.response.data.error)) ? String(e.response.data.message || e.response.data.error) : '';
       const raw = apiMsg || String(e?.message || 'Failed to add customer');
       toast(raw.replace(/^Server\s+\d+:\s*/i, ''), 'error');
@@ -1110,17 +1071,16 @@ export default{
 
 
 
-// Handles handle Show Add Customer
     const handleShowAddCustomer = ()=>{
       showAddCustomer.value = true;
     } 
-// Handles handle Close Add Customer
+
     const handleCloseAddCustomer = () => {
       showAddCustomer.value = false;
     }
 
 
-// Handles handle Order Details
+
     const handleOrderDetails = async (customer) =>{
       const needsHydration = !customer || customer.optimistic === true || !customer.customerName || !Array.isArray(customer.menuItems) || customer.menuItems.length === 0;
       let target = customer;
@@ -1128,9 +1088,7 @@ export default{
   try { await loadCurrent(); }
   catch (_) { console.debug('[overview] hydrate current failed'); }
         if (customer) {
-          // Handles byId
           const byId = (customer.id != null) ? customerInfo.value.find(c => c.id === customer.id) : null;
-          // Handles byQn
           const byQn = (!byId && customer.queueNo) ? customerInfo.value.find(c => c.queueNo === customer.queueNo) : null;
           target = byId || byQn || customer;
         }
@@ -1140,7 +1098,6 @@ export default{
     } 
 
 
-// Handles complete Customer
     const completeCustomer = async (row) =>{
       if (completing) return;
       if (!row || isServeDisabled(row)) {
@@ -1225,17 +1182,14 @@ export default{
     const completedPages = computed(() => Array.from({ length: completedTotalPages.value }, (_, i) => i + 1))
     const cancelledPages = computed(() => Array.from({ length: cancelledTotalPages.value }, (_, i) => i + 1))
     const pagedCurrentCustomers = computed(() => {
-      // Handles start
       const start = (currentPageCurrent.value - 1) * PAGE_SIZE
       return filteredCustomers.value.slice(start, start + PAGE_SIZE)
     })
     const pagedCompletedCustomers = computed(() => {
-      // Handles start
       const start = (currentPageCompleted.value - 1) * PAGE_SIZE
       return filteredCompleted.value.slice(start, start + PAGE_SIZE)
     })
     const pagedCancelledCustomers = computed(() => {
-      // Handles start
       const start = (currentPageCancelled.value - 1) * PAGE_SIZE
       return filteredCancelled.value.slice(start, start + PAGE_SIZE)
     })
@@ -1266,7 +1220,6 @@ export default{
 
 
 
-// Handles handle Update Customer
     const handleUpdateCustomer = (updateCustomer) =>{
 
       selectedOrder.value = { ...selectedOrder.value, ...updateCustomer };
@@ -1285,7 +1238,6 @@ export default{
     }
 
 
-// Handles handle Status Changed
   const handleStatusChanged = ({ id, status, paid }) => {
 
       const idx = customerInfo.value.findIndex(c => c.id === id || c.queueNo === selectedOrder.value.queueNo);
@@ -1339,7 +1291,7 @@ export default{
     }).length)
     const addDisabled = computed(() => {
       const maxLen = Number(props.settingsSummary?.maxQueueLength || 0);
-      if (!maxLen) return false; // no limit configured
+      if (!maxLen) return false; 
 
       return (props.isServiceBased ? waitingCount.value : waitingPaidCount.value) >= maxLen;
     })
@@ -1389,62 +1341,57 @@ export default{
 </script>
 
 <style scoped>
-/* Horizontal scroll container for tables */
 .table-scroll-wrapper {
   overflow-x: auto;
 }
 
-/* Preserve current UI styles, but avoid wrapping so columns stay intact */
+
 .queue-table {
   border-collapse: separate;
   border-spacing: 0;
   white-space: nowrap;
 }
 
-/* Keep header aligned while horizontally scrolling (sticky inside the scroller) */
 .queue-table thead th {
   position: sticky;
   top: 0;
-  z-index: 1; /* sit above rows */
+  z-index: 1; 
 }
 
-/* Keep first column (Queue #) visible while horizontally scrolling */
+
 .queue-table td:first-child {
   position: sticky;
   left: 0;
   z-index: 1;
-  /* subtle themed tint to distinguish sticky column */
-  background-color: rgba(254, 250, 224, 0.9); /* #FEFAE0 at ~90% */
-  min-width: 5.5rem; /* space for star icon + 4-digit number */
-  box-shadow: 2px 0 0 rgba(0, 0, 0, 0.06); /* subtle divider on the right */
+  background-color: rgba(254, 250, 224, 0.9); 
+  min-width: 5.5rem;
+  box-shadow: 2px 0 0 rgba(0, 0, 0, 0.06); 
 }
 .queue-table thead th:first-child {
   position: sticky;
   left: 0;
-  z-index: 3; /* higher than body cells and other headers */
-  /* inherit header bg (row has bg-gray-200), don't force white here */
+  z-index: 3; 
   box-shadow: 2px 0 0 rgba(0, 0, 0, 0.06);
 }
 
-/* Ensure last column (Action) remains accessible without wrapping */
 .queue-table th:last-child,
 .queue-table td:last-child {
   white-space: nowrap;
 }
 
-/* Make scrollbars visible but subtle on WebKit */
+
 .table-scroll-wrapper::-webkit-scrollbar {
   height: 8px;
 }
 .table-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(40, 54, 24, 0.35); /* themed subtle green */
+  background: rgba(40, 54, 24, 0.35); 
   border-radius: 4px;
 }
 .table-scroll-wrapper::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.06);
 }
 
-/* Firefox scrollbar (uses CSS Scrollbar spec) */
+
 .table-scroll-wrapper {
   scrollbar-color: rgba(40, 54, 24, 0.35) rgba(0, 0, 0, 0.06);
   scrollbar-width: thin;

@@ -5,24 +5,21 @@ export interface CatalogForm {
   category?: string | null;
   description?: string;
   price: string | number | null;
-  duration: string | number | null; // minutes
+  duration: string | number | null;
   available?: boolean;
 }
 
 export interface ValidationOptions {
-  requireCategory?: boolean; // food items
-  requireDuration?: boolean; // now required for both menu & services per request
-  minPrice?: number; // default 0
-  minDuration?: number; // default 1
+  requireCategory?: boolean; 
+  requireDuration?: boolean; 
+  minPrice?: number; 
+  minDuration?: number; 
 }
 
 
-// Handles use Catalog Item Validation
 export function useCatalogItemValidation(form: CatalogForm, opts: ValidationOptions){
   const errors = reactive<{[k:string]: string}>({});
 
-
-// Handles validate
   function validate(){
 
     if(!form.name || !form.name.toString().trim()) {

@@ -288,8 +288,8 @@ export default {
     const displayMenuItems = ref(Array.isArray(props.customer?.menuItems) ? [...props.customer.menuItems] : []);
   let ewtTimer = null;
   const ewtSeconds = ref(null);
-  const lastAppliedEwtMinutes = ref(null); // track last server ETA minutes used for baseline
-  const frozenAtCallSeconds = ref(null); // when called, freeze the remaining seconds
+  const lastAppliedEwtMinutes = ref(null); 
+  const frozenAtCallSeconds = ref(null); 
 
 
 // Handles baseline Key
@@ -468,7 +468,6 @@ export default {
                   price: Number(it.price ?? 0),
                 }));
               } else if (mine.order_total != null) {
-                // fallback: show a synthetic single line for total when items are not provided
                 displayMenuItems.value = [{ name: 'Order Total', quantity: 1, price: Number(mine.order_total) }];
               }
               if (String(paymentStatus.value).toLowerCase() === 'paid') {
@@ -605,6 +604,7 @@ export default {
                   displayMenuItems.value = [{ name: 'Order Total', quantity: 1, price: Number(mine.order_total) }];
                 }
                 if (String(paymentStatus.value).toLowerCase() === 'paid') {
+                  const next = String(mine.status || 'pending').toLowerCase();
                   if (next === 'called') {
                     if (ewtTimer) { clearInterval(ewtTimer); ewtTimer = null; }
                     if (ewtSeconds.value != null) {

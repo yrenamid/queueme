@@ -25,12 +25,13 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
         role.value = payload.role;
         try {
           localStorage.setItem('role', payload.role);
-        } catch {
-
+        } catch (err) {
+        //safe to ignore
+          console.debug('[admin] persist role failed', err);
         }
       }
-    } catch {
-
+    } catch (err) {
+      console.debug('[admin] hydrateRoleFromToken failed', err);
     }
   }
 
@@ -44,8 +45,8 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
   const showCurrentOverview = ref(true);
   const showOverview1 = ref(true);
   const showChart = ref(true);
-  const showMenu = ref(true); // Only used in food-based
-  const showServices = ref(true); // Only used in service-based
+  const showMenu = ref(true); // Only in food-based
+  const showServices = ref(true); // Only in service-based
 
   const qrCodeDataUrl = ref('');
 
@@ -85,25 +86,19 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
   }
 
 
-// Handles close Popover
   const closePopover = () => {
     const popover = document.querySelector('ion-popover') as any;
     if (popover) popover.dismiss();
   };
 
 
-// Handles handle Show Qr Code
   const handleShowQrCode = () => { showQRCode.value = true; };
   
-
-// Handles notifications
   const notifications = () => { closePopover(); showNotifications.value = true; };
 
-// Handles settings
   const settings = () => { closePopover(); showSettings.value = true; };
 
 
-// Handles logout
   const logout = async () => {
     closePopover();
     try {
@@ -121,23 +116,21 @@ export function useAdminDashboard(options?: { defaultTab?: string }) {
   };
 
 
-// Handles refresh Queue Summary
   async function refreshQueueSummary() {
     try {
       const s = await apiGetQueueSummary();
       queueSummary.value = s;
     } catch (e) {
-
+      console.debug('[admin] refreshQueueSummary failed', e);
     }
   }
 
-// Handles refresh Overview Metrics
   async function refreshOverviewMetrics() {
     try {
       const m = await apiGetOverviewMetrics();
       overviewMetrics.value = m;
     } catch (e) {
-
+      console.debug('[admin] refreshOverviewMetrics failed', e);
     }
   }
 

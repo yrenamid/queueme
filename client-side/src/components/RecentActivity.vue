@@ -30,17 +30,15 @@ import { getRecentActivity as apiGetRecentActivity } from '@/services/api';
 
 export default {
   name: 'RecentActivity',
-  // setup: pull cached + backend activity then subscribe to realtime; shows last few items
   setup() {
   const items = ref([]);
-    // Handles businessId
     const businessId = (typeof window !== 'undefined') ? localStorage.getItem('businessId') : null;
     const STORAGE_KEY = `recentActivity:${businessId || 'anon'}`;
     const MAX_ITEMS = 10;
     let offJoin, offStatus; let tick;
 
 
-// Handles persist
+
     function persist() {
       try {
         const toSave = items.value.slice(0, MAX_ITEMS).map(it => ({
@@ -55,7 +53,7 @@ export default {
     }
 
 
-// Handles push
+
     function push(text, payload) {
 
       if (businessId && payload && String(payload.business_id) !== String(businessId)) return;
@@ -64,13 +62,11 @@ export default {
       persist();
     }
 
-// Handles clear All
     function clearAll() {
       items.value = [];
   try { localStorage.removeItem(STORAGE_KEY); } catch (err) { console.debug('[recent-activity] failed to clear storage', err); }
     }
 
-// Handles time Ago
     function timeAgo(ts) {
       const diff = Math.floor((Date.now() - ts) / 1000);
       if (diff < 5) return 'just now';
@@ -79,7 +75,6 @@ export default {
       const h = Math.floor(m/60); return h + 'h ago';
     }
 
-// Handles format Date Time
     function formatDateTime(ts) {
       try {
         return new Date(ts).toLocaleString();

@@ -43,9 +43,7 @@ export default {
     isFull: { type: Boolean, default: false }
   },
   emits: ["continue", "update-customer"],
-  // setup: emit continue when Join is clicked (push removed)
   setup(props, { emit }) {
-    // Join button simply advances the flow
     const joinBtn = () => {
       emit("continue");
     };

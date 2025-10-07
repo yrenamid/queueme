@@ -137,6 +137,10 @@ export default {
       const email = String(this.customerEmailLocal || '');
       if (!email) errs.email = 'Email is required';
       else if (/\s/.test(email)) errs.email = 'Email cannot contain spaces';
+      else {
+        const simpleEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+        if (!simpleEmail.test(email)) errs.email = 'Enter a valid email address';
+      }
       return errs;
     },
     canSubmit(){

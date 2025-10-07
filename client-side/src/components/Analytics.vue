@@ -108,7 +108,6 @@ Chart.register(...registerables);
 export default {
   name: "AnalyticsPanel",
   components: { IonCard, IonSelect, IonSelectOption, IonButton, FontAwesomeIcon },
-  // setup: fetch time-series analytics, render chart, and paginate feedback
   setup() {
     const range = ref('today');
     const dateLabel = ref('');
@@ -125,7 +124,7 @@ export default {
     let chart;
 
 
-    // Handles fetchSeries
+
     async function fetchSeries() {
       const params = { range: range.value };
       const { data } = await api.get('/analytics/series', { params: { ...params, _t: Date.now() } });
@@ -137,7 +136,6 @@ export default {
     }
 
 
-// Handles render Chart
     function renderChart(labels, servedCounts, avgWaits) {
       const ctx = document.getElementById('analyticsChart');
       if (chart) { chart.destroy(); }
@@ -163,7 +161,6 @@ export default {
     }
     
 
-// Handles on Range Change
     function onRangeChange(e){ range.value = e.detail.value; fetchSeries(); }
 
     onMounted(async () => {
@@ -171,7 +168,6 @@ export default {
       await refreshFeedback();
 
 
-// Handles handler
       const handler = async () => {
         try {
           await refreshFeedback();
@@ -185,19 +181,17 @@ export default {
     });
 
 
-// Handles recalc Pagination
     function recalcPagination(){
       const total = feedbackList.value?.length || 0;
       totalPages.value = Math.max(1, Math.ceil(total / pageSize));
       if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
       if (currentPage.value < 1) currentPage.value = 1;
-      // Handles start
       const start = (currentPage.value - 1) * pageSize;
       pagedFeedback.value = (feedbackList.value || []).slice(start, start + pageSize);
     }
 
 
-// Handles refresh Feedback
+
     async function refreshFeedback(){
       if (!businessId) return;
       try {
@@ -211,13 +205,11 @@ export default {
     }
 
 
-// Handles go To Page
+
     function goToPage(p){ if (typeof p === 'number') { currentPage.value = p; recalcPagination(); } }
 
-// Handles prev Page
     function prevPage(){ if (currentPage.value > 1) { currentPage.value -= 1; recalcPagination(); } }
 
-// Handles next Page
     function nextPage(){ if (currentPage.value < totalPages.value) { currentPage.value += 1; recalcPagination(); } }
 
     return { range, onRangeChange, dateLabel, feedbackList, feedbackStats, refreshFeedback, pagedFeedback, currentPage, totalPages, goToPage, prevPage, nextPage };

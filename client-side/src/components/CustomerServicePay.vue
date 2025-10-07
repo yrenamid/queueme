@@ -370,7 +370,7 @@ export default {
 // Handles apply Ewt Baseline
     const applyEwtBaseline = (mins) => {
       if (mins == null || isNaN(Number(mins))) return;
-      frozenAtCallSeconds.value = null; // clear any prior freeze on re-baseline
+      frozenAtCallSeconds.value = null; 
       ewtSeconds.value = Math.max(0, Math.round(Number(mins) * 60));
       myEWT.value = Math.ceil((ewtSeconds.value || 0) / 60);
       lastAppliedEwtMinutes.value = Number(mins);
@@ -393,7 +393,7 @@ export default {
       const m = Number(mins);
       if (!isFinite(m)) return;
       const statusNow = String(myStatus.value || '').toLowerCase();
-      if (statusNow === 'called' || statusNow === 'served') return; // don't re-baseline once called/served
+      if (statusNow === 'called' || statusNow === 'served') return;
       if (lastAppliedEwtMinutes.value != null && Number(lastAppliedEwtMinutes.value) === m) return;
       applyEwtBaseline(m);
     };
@@ -530,7 +530,7 @@ export default {
           }
         }));
   } catch(err) { console.debug('[service-pay] subscribe queue:updated setup failed', err); }
-      updateDateTime(); // initial
+      updateDateTime(); 
       const interval = setInterval(updateDateTime, 1000); // update every sec
       const poll = setInterval(async () => {
         const business_id = Number(route.params.business_id);
@@ -628,29 +628,18 @@ export default {
       }, 0);
     });
 
-
-    // Handles submitBtn
     const submitBtn = async () => {
-
-
-
-
-
-
-
 
       emit("continue");
     };
 
 
-// Handles handle Rate Service
     const handleRateService = () => {
       showRateService.value = true;
       console.log("clicked");
     };
 
 
-// Handles handle Join Next Queue
     const handleJoinNextQueue = async () => {
       try { localStorage.removeItem('publicFlow_food'); } catch(err) { console.debug('[service-pay] clear publicFlow_food failed', err); }
       try { localStorage.removeItem('publicFlow_service'); } catch(err) { console.debug('[service-pay] clear publicFlow_service failed', err); }
@@ -669,7 +658,6 @@ export default {
     };
 
 
-// Handles handle Pre Call Delay
     const handlePreCallDelay = () => {
       if (!allowDelay.value) return;
       if (hasDelayed.value) return;
@@ -678,7 +666,6 @@ export default {
     };
 
 
-// Handles handle Pre Call Delay Submit
     const handlePreCallDelaySubmit = async ({ minutes }) => {
       const business_id = Number(route.params.business_id);
       const id = props.customer?.id ? Number(props.customer.id) : undefined;
@@ -688,7 +675,6 @@ export default {
     };
 
 
-// Handles go Back
     const goBack = async () => {
       const ok = window.confirm('Cancel your queue? This cannot be undone.');
       if (!ok) return;
@@ -779,7 +765,6 @@ export default {
           </div>`;
         document.body.appendChild(modal);
 
-// Handles close
         const close = () => { try { document.body.removeChild(modal); } catch(err) { console.debug('[service-pay] modal remove failed', err); } };
         modal.querySelector('#cash-ok')?.addEventListener('click', close);
       } catch(err) { console.debug('[service-pay] modal create failed', err); }

@@ -139,7 +139,6 @@ export default {
   },
   emits: ["close", "update-item"],
 
-// Initializes component state and handlers
   setup(props) {
   const localItem = reactive({ name:'', category:'', description:'', price:'', duration:'' });
   const touched = ref({ name: false, category: false, price: false, duration: false });

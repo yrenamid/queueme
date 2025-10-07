@@ -75,7 +75,6 @@ export default {
   props: {
     isOpen: Boolean,
   },
-  // setup: initialize form state and validation
   setup(){
     const categories = ['Meals','Drinks','Snacks','Desserts','Sides','Specials'];
     const form = ref({ name: '', category: null, description:'', price:'', duration:'', available: true });

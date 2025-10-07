@@ -97,7 +97,6 @@ export default {
   props: {
     maxQueueLength: Number,
     reserveSlots: Number,
-  // Deprecated legacy; no longer used
   notifyCustomer: Boolean,
     availableKitchenStaff: Number,
     allowDelay: { type: Boolean, default: true },
@@ -111,7 +110,7 @@ export default {
     "update:allowDelay",
     "update:allowOnlinePayment",
   ],
-  // setup: proxy v-model bindings for settings fields; legacy notify kept for compatibility
+  
   setup(props, { emit }) {
     const maxQueueLengthModel = computed({ get: () => props.maxQueueLength, set: v => emit('update:maxQueueLength', Number(v)) });
     const reserveSlotsModel = computed({ get: () => props.reserveSlots, set: v => emit('update:reserveSlots', Number(v)) });

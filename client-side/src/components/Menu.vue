@@ -187,7 +187,6 @@ export default {
     EditItemModal,
     IonToast
   },
-  // setup: catalog CRUD, category/filtering, pagination, and toasts
   setup() {
   const showAddItem = ref(false);
   const allCategories = ref("");
@@ -198,7 +197,7 @@ export default {
   const page = ref(1);
   const pageSize = ref(10);
 
-  // Handles businessCategory
+
   const businessCategory = (localStorage.getItem('businessCategory') || '').toLowerCase();
   const isFood = businessCategory === 'food';
 
@@ -231,50 +230,34 @@ export default {
       return filteredItems.value.slice(start, start + pageSize.value);
     });
 
-  // pagination next
     function nextPage(){ if(page.value < totalPages.value) page.value++; }
-
-  // pagination prev
     function prevPage(){ if(page.value > 1) page.value--; }
 
 
-    // initial load
     async function loadInitial(){
       try { await loadMenu(); } catch(e){ showToast(error.value || 'Failed to load menu','danger'); }
     }
 
-
-    // add item/service with category guard for services
     async function addItem(newItem){
       try { await addCatalogItem({ ...newItem, category: isFood ? newItem.category : null }); showToast('Item added','success'); }
       catch(e){ console.error(e); showToast('Add failed','danger'); }
     }
 
-
-  // open add modal
     function handleShowAddItem(){ showAddItem.value = true; }
-
-  // open edit modal with selected item
     function editBtn(item){ selectedItem.value = { ...item }; showEditModal.value = true; }
 
-
-    // persist updates for selected item
     async function updateItem(updated){
       if(!selectedItem.value?.id) return;
       try { await updateCatalogItem(selectedItem.value.id, updated); showToast('Item updated','success'); }
       catch(e){ console.error(e); showToast('Update failed','danger'); }
     }
 
-
-    // delete item/service
     async function deleteBtn(item){
       if(!item?.id) return; if(!confirm('Delete this item?')) return;
       try { await removeCatalogItem(item.id); showToast('Item deleted','medium'); }
       catch(e){ console.error(e); showToast('Delete failed','danger'); }
     }
 
-
-    // toggle availability with feedback
     async function toggleAvailabilityWrapper(item){
       try { await toggleAvailability(item); showToast(item.is_available ? 'Marked unavailable' : 'Marked available','tertiary'); }
       catch(e){ console.error(e); showToast('Toggle failed','danger'); }
@@ -282,10 +265,7 @@ export default {
 
 
 
-  // toast helpers
   function showToast(message, color='success'){ toast.value = { open:true, message, color, duration:2000 }; }
-
-  // close toast
   function closeToast(){ toast.value.open = false; }
 
   loadInitial();

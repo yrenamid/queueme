@@ -2,11 +2,8 @@ let socket: WebSocket | null = null;
 const listeners: { [type: string]: Array<(data: any) => void> } = {};
 
 
-// Handles compute Ws Url
 function computeWsUrl(baseUrl?: string) {
   if (baseUrl) return baseUrl;
-
-  // Use optional access to avoid TS errors in non-Vite contexts
   const env: any = (import.meta as any)?.env || {};
   if (env.DEV && typeof window !== 'undefined') {
     const loc = window.location;
@@ -30,7 +27,6 @@ function computeWsUrl(baseUrl?: string) {
 }
 
 
-// Handles connect Realtime
 export function connectRealtime(baseUrl?: string) {
   const url = computeWsUrl(baseUrl);
 
@@ -44,19 +40,15 @@ export function connectRealtime(baseUrl?: string) {
         try {
           fn(data);
         } catch (err) {
-          // Swallow listener errors to avoid breaking the stream, but log for debugging
           const isDev = !!((import.meta as any)?.env?.DEV);
           if (isDev) {
-            // eslint-disable-next-line no-console
             console.warn('[realtime] listener error', err);
           }
         }
       });
     } catch (err) {
-      // Ignore malformed messages, but log in development
       const isDev = !!((import.meta as any)?.env?.DEV);
       if (isDev) {
-        // eslint-disable-next-line no-console
         console.warn('[realtime] failed to parse message', err, ev?.data);
       }
     }

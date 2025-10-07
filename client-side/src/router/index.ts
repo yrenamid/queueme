@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
-import HomePage from '../views/FrontPage.vue';
+import FrontPage from '../views/FrontPage.vue';
 import Register from  '../views/RegisterBusiness.vue';
 import Login from '../views/Login.vue';
 import Dashboard from '../views/Dashboard.vue'
@@ -18,7 +18,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/home',
     name: 'Home',
-    component: HomePage
+    component: FrontPage
   },
   {
     path: '/register',
@@ -77,11 +77,9 @@ router.beforeEach((to, from, next) => {
     return next();
   }
 
-  // Gracefully redirect any legacy dashboard paths to slugged dashboard
   if (token && (to.path === '/food-based-dashboard' || to.path === '/service-based-dashboard')) {
     const slug = localStorage.getItem('businessSlug');
     if (slug) return next({ path: `/dashboard/${slug}`, replace: true });
-    // Missing slug? Let user re-authenticate
     return next({ path: '/login', replace: true });
   }
 

@@ -300,7 +300,6 @@ export default {
     CallCustomersModal,
   },
 
-// Initializes component state and handlers
   setup() {
 
     const {
@@ -333,7 +332,6 @@ export default {
     } = useAdminDashboard();
   const overviewSummary = ref({ totalCustomers: 0, avgWait: 0, completedToday: 0, cancelledToday: 0 })
 
-// Handles on Overview Summary
   function onOverviewSummary(s) { overviewSummary.value = s || overviewSummary.value }
 
 
@@ -346,7 +344,6 @@ export default {
 
   const baselines = ref({});
 
-// Handles on Baselines
   function onBaselines(b) { baselines.value = b || {}; }
 
 
@@ -354,7 +351,6 @@ export default {
 
       const savedAdminTab = typeof window !== 'undefined' ? localStorage.getItem('adminActiveTab') : null;
 
-      // Handles allowed
       const allowed = (role.value === 'cashier') ? ['overview','queueManagement'] : ['overview','queueManagement','menu','analytics'];
 
       if (savedAdminTab && allowed.includes(savedAdminTab)) activeTab.value = savedAdminTab;
@@ -379,7 +375,6 @@ export default {
       });
   } catch (err) { console.debug('[food-admin] error during cleanup', err); }
 
-// Handles on Called
     const onCalled = () => {
 
     };

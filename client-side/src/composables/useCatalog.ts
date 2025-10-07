@@ -11,17 +11,15 @@ interface CatalogItem {
   category?: string | null;
   duration?: number | string | null;
   is_available?: boolean;
-  available?: boolean; // for convenience in components
+  available?: boolean; 
 }
 
 
-// Handles use Catalog
 export function useCatalog(mode: CatalogMode){
   const items = ref<CatalogItem[]>([]);
   const loading = ref(false);
   const error = ref('');
 
-  // Handles mapIn
   function mapIn(raw: any): CatalogItem {
     return {
       id: raw.id,
@@ -36,7 +34,6 @@ export function useCatalog(mode: CatalogMode){
   }
 
 
-// Handles load
   async function load(){
     loading.value = true; error.value='';
     try {
@@ -47,7 +44,6 @@ export function useCatalog(mode: CatalogMode){
   }
 
 
-  // Handles add
   async function add(payload: Partial<CatalogItem>){
     const toSend = {
       name: payload.name || '',
@@ -65,7 +61,6 @@ export function useCatalog(mode: CatalogMode){
   }
 
 
-  // Handles update
   async function update(id: number, payload: Partial<CatalogItem>){
     const base = {
       name: payload.name,
@@ -84,14 +79,12 @@ export function useCatalog(mode: CatalogMode){
   }
 
 
-  // Handles remove
   async function remove(id: number){
     if (mode === 'service') await deleteService(id); else await deleteMenuItem(id);
   items.value = items.value.filter((i: CatalogItem) => i.id !== id);
   }
 
 
-// Handles toggle Availability
   async function toggleAvailability(item: CatalogItem){
     if(!item.id) return;
     const saved = mode === 'service'

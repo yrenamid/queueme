@@ -1,5 +1,4 @@
 <template>
-  <!-- Single root so IonRouterOutlet can attach registerIonPage to the underlying ion-page -->
   <component :is="currentView" />
 </template>
 
@@ -19,7 +18,6 @@ export default {
 		const slugParam = computed(() => String(route.params.slug || ''));
 		const category = ref(localStorage.getItem('businessCategory') || '');
 
-		// Ensure slug in URL is stored for later navigations
 		const ensureSlug = () => {
 			const existing = localStorage.getItem('businessSlug') || '';
 			if (!existing && slugParam.value) {
@@ -39,14 +37,12 @@ export default {
 						localStorage.setItem('businessCategory', info.category);
 						if (info.slug && !localStorage.getItem('businessSlug')) {
 							localStorage.setItem('businessSlug', info.slug);
-							// keep URL slug authoritative; optionally normalize if mismatch
 							if (slugParam.value && info.slug !== slugParam.value) {
 								router.replace(`/dashboard/${info.slug}`);
 							}
 						}
 					}
 				} catch (e) {
-					// If we fail to resolve, keep page usable (user is still authenticated)
 					console.warn('[dashboard] failed to resolve category by businessId', e);
 				}
 			}
@@ -61,7 +57,6 @@ export default {
 			const cat = (category.value || '').toLowerCase();
 			if (cat === 'service') return ServiceBasedAdmin;
 			if (cat === 'food') return FoodBasedAdmin;
-			// Default fallback: show Food dashboard if unknown
 			return FoodBasedAdmin;
 		});
 
@@ -71,5 +66,4 @@ export default {
 </script>
 
 <style scoped>
-/* No wrapper styling; nested views control layout */
 </style>

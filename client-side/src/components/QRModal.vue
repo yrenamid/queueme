@@ -55,7 +55,7 @@
 
 <script>
 
-// Modal that displays the business QR code, supports regeneration (owner/manager) and download.
+// Modal that displays the business QR code with regeneration (owner/manager) and download.
 import { IonModal, IonButton } from "@ionic/vue";
 import { ref, computed, nextTick } from 'vue';
 import QrCodeVue3 from 'qrcode-vue3';
@@ -76,7 +76,6 @@ export default {
   },
   emits: ["close"],
 
-// Initializes component state and handlers
   setup(props, { emit }) {
   const qrImage = ref(localStorage.getItem('qrImage') || '');
   const qrUrl = ref(localStorage.getItem('qrUrl') || '');
@@ -85,7 +84,6 @@ export default {
     const loading = ref(false);
 
 
-// Handles download QRCode
     const downloadQRCode = async () =>{
       await nextTick()
 
@@ -108,7 +106,6 @@ export default {
     }
 
 
-// Handles on Regenerate
     const onRegenerate = async () => {
       try {
         loading.value = true;
@@ -126,8 +123,6 @@ export default {
     }
 
 
-
-// Handles close
     const close = () => {
       emit("close");
     };

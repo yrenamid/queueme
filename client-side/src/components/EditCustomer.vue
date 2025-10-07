@@ -101,7 +101,6 @@ import {
   IonTextarea,
   IonToggle,
 } from "@ionic/vue";
-// Modal to edit a customer's details and adjust selected items/services with pagination and validation.
 import { ref, computed, reactive, watch } from "vue";
 import { formatPeso } from "../utils/currency";
 import { getSettings, listQueue } from '@/services/api';
@@ -131,7 +130,6 @@ export default {
     },
     emits: ['close', 'update-customer'],
 
-// Initializes component state and handlers
     setup(props){
       const { toast } = useToast();
       const localCustomer = reactive({
@@ -151,10 +149,8 @@ export default {
   const errors = ref({ customerName: '', contactNumber: '', option: '', partySize: '' });
 
 
-// Handles reset Local Items
       const resetLocalItems = (src, selected) => {
         const selectedMap = new Map((selected||[]).map(i => [i.id ?? i.name, i]));
-        // Handles arr
         const arr = (src || []).filter(i => i.is_available || i.available)
           .map(i => {
             const s = selectedMap.get(i.id ?? i.name);
@@ -186,10 +182,7 @@ export default {
       const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize.value)));
       const pagedItems = computed(() => filteredItems.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
 
-// Handles next Page
       const nextPage = () => { if (page.value < totalPages.value) page.value++; };
-
-// Handles prev Page
       const prevPage = () => { if (page.value > 1) page.value--; };
 
       const totalAmount = computed(() => {
@@ -203,7 +196,6 @@ export default {
   const reserveSlots = ref(0);
   const priorityCount = ref(0);
 
-// Handles refresh Priority State
       async function refreshPriorityState(){
   try { const s = await getSettings(); reserveSlots.value = Number(s?.reserve_slots || 0); } catch(e){ console.error('[EditCustomer] getSettings', e); }
         try {
@@ -214,7 +206,6 @@ export default {
       watch(() => props.isOpen, (open) => { if (open) refreshPriorityState(); });
 
 
-// Handles can Be Priority
       function canBePriority(){
         if (!localCustomer.isPriority) return true;
         if (reserveSlots.value <= 0) return false;
@@ -227,7 +218,7 @@ export default {
       const priorityDisabled = computed(() => {
         if (reserveSlots.value <= 0) return true;
         const currentlyPriority = !!(props.customer && props.customer.isPriority);
-        if (currentlyPriority) return false; // allow turning off/on when already priority
+        if (currentlyPriority) return false; 
         return priorityCount.value >= reserveSlots.value;
       });
 
@@ -240,7 +231,6 @@ export default {
       });
 
 
-// Handles validate
       const validate = () => {
         errors.value = { customerName: '', contactNumber: '', option: '', partySize: '' };
   if (!localCustomer.customerName?.trim()) errors.value.customerName = 'Customer name is required';
@@ -288,7 +278,6 @@ export default {
           return;
         }
 
-        // Handles uiItems
         const uiItems = (this.localItems || [])
           .filter(i => i.checked && (i.quantity || 0) > 0)
           .map(i => ({ id: i.id, name: i.name, price: Number(i.price)||0, quantity: Math.max(1, Number(i.quantity||1)), ...(i.duration != null ? { duration: Number(i.duration) } : {}) }));

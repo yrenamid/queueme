@@ -132,7 +132,6 @@
 </template>
 
 <script setup>
-// Customer-facing modal that lets a user request to delay their turn by preset minute options and emits submit/close.
 import { ref } from "vue";
 import { IonModal, IonButton } from "@ionic/vue";
 
@@ -158,13 +157,12 @@ const timeOptions = [
 ];
 
 
-// Handles set Selected Time
+
 const setSelectedTime = (value) => {
   selectedTime.value = value;
 };
 
 
-// Handles handle Submit
 const handleSubmit = () => {
   if (selectedTime.value) {
     isSubmitted.value = true;
@@ -178,7 +176,6 @@ const handleSubmit = () => {
 };
 
 
-// Handles handle Close
 const handleClose = () => {
   selectedTime.value = null;
   isSubmitted.value = false;

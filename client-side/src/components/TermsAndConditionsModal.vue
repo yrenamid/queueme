@@ -44,7 +44,7 @@
 </template>
 
 <script>
-// Generic modal displaying QueueMe terms; single Close action emitting to parent.
+//modal displaying QueueMe terms
 import { IonModal, IonButton } from "@ionic/vue";
 
 export default {

@@ -202,18 +202,15 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 
 
-// Handles go To Register
 const goToRegister = () => {
   router.push("/register");
 };
 
-// Handles go To Login
 const goToLogin = () => {
   router.push("/login");
 };
 
 
-// Handles scroll To Home Section
 const scrollToHomeSection = () => {
   const homeSection = document.getElementById("home");
   if (homeSection) {
@@ -222,7 +219,6 @@ const scrollToHomeSection = () => {
 };
 
 
-// Handles scroll To Features
 const scrollToFeatures = () => {
   const featuresSection = document.getElementById("features");
   if (featuresSection) {

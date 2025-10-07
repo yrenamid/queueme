@@ -66,7 +66,6 @@ export default {
   CustomerPayOrder,
   },
 
-// Initializes component state and handlers
   setup() {
   const { toast } = useToast();
   const step = ref(1);
@@ -96,7 +95,6 @@ export default {
 
     let pollTimer = null;
 
-    // Handles fetchSummary
     const fetchSummary = async (business_id) => {
       try {
         const summary = await api.get(`/public/queue-summary`, { params: { business_id, _t: Date.now() } });
@@ -151,7 +149,6 @@ export default {
     });
 
 
-    // Handles updateCustomer
     const updateCustomer = (data) => {
       customer.value = {
         ...customer.value,
@@ -160,7 +157,6 @@ export default {
     };
 
 
-// Handles handle Customer Info
     const handleCustomerInfo = (data) => {
   serverError.value = '';
       customer.value.customerName = data.customerName;
@@ -172,7 +168,6 @@ export default {
     };
 
 
-// Handles handle Service Select
     const handleServiceSelect = async (data) => {
       Object.assign(customer.value, data);
 
@@ -184,7 +179,6 @@ export default {
           step.value = 1;
           return;
         }
-        // Handles order_items
         const order_items = (data.services || []).map((i) => ({ id: i.id, name: i.name, price: Number(i.price)||0, quantity: Number(i.quantity)||1, duration: i.duration ? Number(i.duration) : undefined }));
         const order_total = order_items.reduce((s, i) => s + (Number(i.price)||0) * (Number(i.quantity)||1), 0);
         const resp = await publicJoinQueue({
@@ -213,7 +207,6 @@ export default {
         }
   } catch(e) {
     console.debug('[publicJoinQueue][service] failed', e);
-    // Handles respMsg
     const respMsg = (e && e.response && e.response.data && (e.response.data.message || e.response.data.error)) ? String(e.response.data.message || e.response.data.error) : '';
     const raw = respMsg || String(e?.message || '');
     const lower = raw.toLowerCase();
@@ -231,7 +224,7 @@ export default {
           msg = 'Queue is currently full. Please try again later.';
         }
         toast(msg.replace(/^Server\s+\d+:\s*/i, ''), 'error');
-        step.value = msg.includes('Queue is currently full') ? 1 : 2; // Return to front page if capacity issue; else back to info form
+        step.value = msg.includes('Queue is currently full') ? 1 : 2; 
       }
     };
 

@@ -102,7 +102,6 @@ export default {
     return { email: "", password: "", businessName: localStorage.getItem('businessName') || '' };
   },
 
-// Initializes component state and handlers
   setup() {
     const router = useRouter();
     return {

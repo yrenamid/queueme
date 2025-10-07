@@ -10,8 +10,12 @@ async function listStaff(req, res) {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const pageSize = Math.min(Math.max(parseInt(req.query.pageSize) || 10, 1), 100);
     const offset = (page - 1) * pageSize;
+
+    const lim = Number.isFinite(pageSize) ? Math.max(1, Math.min(100, Number(pageSize))) : 10;
+    const off = Number.isFinite(offset) ? Math.max(0, Number(offset)) : 0;
+    const sql = `SELECT id,name,email,role,created_at FROM users WHERE business_id=? ORDER BY (role='owner') DESC, created_at DESC LIMIT ${lim} OFFSET ${off}`;
     const [rows, totalRows] = await Promise.all([
-      query("SELECT id,name,email,role,created_at FROM users WHERE business_id=? ORDER BY (role='owner') DESC, created_at DESC LIMIT ? OFFSET ?", [req.user.business_id, pageSize, offset]),
+      query(sql, [req.user.business_id]),
       query('SELECT COUNT(*) as cnt FROM users WHERE business_id=?', [req.user.business_id])
     ]);
     res.json({ success:true, data: rows, pagination: { page, pageSize, total: totalRows[0].cnt, totalPages: Math.ceil(totalRows[0].cnt / pageSize) } });

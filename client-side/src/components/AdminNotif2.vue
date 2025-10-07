@@ -83,7 +83,7 @@
 </template>
 
 <script>
-// Toggle UI for enabling/disabling SMS and Email notifications; emits v-model events and active tab.
+//  toggle for enabling/disabling SMS and Email notifications
 import {
   IonSegment,
   IonSegmentButton,
@@ -106,10 +106,8 @@ export default {
   },
   emits: ['update:smsEnabled', 'update:emailEnabled', 'update:activeTab'],
 
-// Initializes component state and handlers
   setup(props, { emit }) {
   const activeTab = ref("sms");
-  // Inform parent about the current tab initially and on change
   watch(activeTab, (val) => emit('update:activeTab', val), { immediate: true });
 
 

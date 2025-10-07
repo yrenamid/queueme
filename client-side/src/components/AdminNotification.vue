@@ -102,7 +102,7 @@ export default {
     }
   },
 
-// Initializes component state and handlers
+
   setup(props) {
   const showNotif = ref(true);
 
@@ -129,7 +129,7 @@ export default {
 
     const sampleData = { customer_name: 'Juan D.', queue_number: 42 };
 
-// Handles render Template
+
     function renderTemplate(t) {
       const txt = String(t || '');
       return txt
@@ -140,11 +140,10 @@ export default {
     const previewEmail = computed(() => renderTemplate(form.value.template_email));
 
 
-// Handles snapshot
+
     const snapshot = () => { original.value = JSON.stringify(form.value); };
 
 
-// Handles load
     const load = async () => {
       try {
         const data = await getNotificationSettings();
@@ -165,7 +164,7 @@ export default {
     };
 
 
-// Handles save
+
     const save = async () => {
       try {
 

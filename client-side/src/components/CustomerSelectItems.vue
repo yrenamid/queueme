@@ -80,7 +80,6 @@ export default {
     preselected: { type: Array, default: () => [] },
   },
   emits: ["continue", "go-back", "update-customer"],
-  // data+methods: manages item selection, quantities, and validation; emits updates
   data() {
     return {
       form: { customerEmail: this.customerEmail || "", customerNumber: this.customerNumber || "", menuItems: [], option: "", notes: "", partySize: "" },

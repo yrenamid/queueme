@@ -109,7 +109,7 @@ export default {
     "update:address",
     "update:phone",
   ],
-// Initializes component state and handlers
+
   setup() {
     const showSettingsTab = ref(false);
     const submitAttempted = ref(false);

@@ -146,7 +146,7 @@
   components: { IonToggle, IonButton, AddService, EditServiceModal, IonToast, IonInput },
 
   props: {},
-  // setup: service catalog CRUD, filtering, pagination, and toasts
+  //service catalog CRUD, filtering, pagination, and toasts
     setup () {
   const showAddService = ref(false)
   const showEditModal = ref(false)
@@ -160,10 +160,8 @@
   const { items: internalServices, load, add, update, remove, toggleAvailability, loading, error } = catalog
 
 
-  // show a brief toast message
       function showToast(message, color='success'){ toast.value = { open:true, message, color, duration:2000 } }
 
-  // close toast
       function closeToast(){ toast.value.open = false }
 
   // initial load of services
@@ -228,10 +226,8 @@
 
       watch(searchTerm, () => { page.value = 1; });
 
-// Handles next Page
-      function nextPage(){ if(page.value < totalPages.value) page.value++; }
 
-// Handles prev Page
+      function nextPage(){ if(page.value < totalPages.value) page.value++; }
       function prevPage(){ if(page.value > 1) page.value--; }
 
       loadServices()

@@ -280,7 +280,8 @@ async function ensureNotificationSettingsColumns() {
   try {
     const toggles = [
       ['notify_via_email', 'TINYINT(1) NOT NULL DEFAULT 0'],
-      ['notify_via_sms', 'TINYINT(1) NOT NULL DEFAULT 0']
+      ['notify_via_sms', 'TINYINT(1) NOT NULL DEFAULT 0'],
+      ['sms_notifications_enabled', 'TINYINT(1) NOT NULL DEFAULT 0']
     ];
     for (const [col, type] of toggles) {
       const rows = await query('SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', ['settings', col]);

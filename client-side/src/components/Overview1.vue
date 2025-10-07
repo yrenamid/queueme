@@ -36,7 +36,6 @@
 </template>
 
 <script>
-// Small KPI grid showing total customers, avg wait time, completed and cancelled counts.
 import { minutesToHMS } from '@/utils/time';
 export default {
   name: 'OverviewOne',

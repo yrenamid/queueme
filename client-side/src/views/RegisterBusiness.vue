@@ -97,7 +97,6 @@ export default {
   name: 'RegisterBusiness',
   components: { IonPage, IonContent, IonHeader, IonToolbar, IonButton, BusinessForm, BusinessType, QueueSettings },
 
-// Initializes component state and handlers
   setup() {
     const router = useRouter();
     const { toast } = useToast();
@@ -111,10 +110,8 @@ export default {
     const phone = ref('');
     const showSuccess = ref(false);
     const qrImage = ref('');
-    // Handles login
     const login = () => router.push('/login');
 
-    // Handles submitRegistration
     const submitRegistration = async (payloadFromChild) => {
       try {
         const staffArr = payloadFromChild.staffList && payloadFromChild.staffList.length
@@ -130,7 +127,6 @@ export default {
           owner_name: null,
           max_queue_length: Number(payloadFromChild.maxQueueLength ?? payloadFromChild.maxQueueLength) || 50,
           reserve_slots: Number(payloadFromChild.reserveSlots ?? payloadFromChild.reserveSlots) || 0,
-          // Single toggle controls push enablement; backend will mirror to notify_via_push
           notify_customer: !!payloadFromChild.notifyCustomer,
         };
         const data = await registerBusiness(payload);
@@ -153,7 +149,6 @@ export default {
       }
     };
 
-// Handles go To Login
     const goToLogin = () => { showSuccess.value = false; router.replace('/login'); };
     return { showBusinessForm, step, businessName, businessEmail, businessPassword, businessType, address, phone, login, submitRegistration, showSuccess, qrImage, goToLogin };
   }

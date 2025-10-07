@@ -296,7 +296,6 @@ export default {
     CallCustomersModal,
   },
 
-// Initializes component state and handlers
   setup() {
     const {
       currentTime,
@@ -324,16 +323,13 @@ export default {
     } = useAdminDashboard();
     const overviewSummary = ref({ totalCustomers: 0, avgWait: 0, completedToday: 0, cancelledToday: 0 })
 
-// Handles on Overview Summary
     function onOverviewSummary(s) { overviewSummary.value = s || overviewSummary.value }
   const baselines = ref({});
 
-// Handles on Baselines
   function onBaselines(b) { baselines.value = b || {}; }
 
     try {
       const savedAdminTab = typeof window !== 'undefined' ? localStorage.getItem('adminActiveTab') : null;
-      // Handles allowed
       const allowed = (role.value === 'cashier') ? ['overview','queueManagement'] : ['overview','queueManagement','services','analytics'];
       if (savedAdminTab && allowed.includes(savedAdminTab)) activeTab.value = savedAdminTab;
       else activeTab.value = allowed[0];

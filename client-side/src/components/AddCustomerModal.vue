@@ -110,7 +110,7 @@ export default {
     isServiceBased: { type: Boolean, default: false },
     
   },
-  // setup: form state, filtering/pagination, priority cap checks, and validation
+
   setup(props) {
     const firstField = ref(null);
     const form = ref({ customerName: "", contactNumber: "", selectedItems: [], notes: "", option: "", partySize: "", isPriority: false });
@@ -124,7 +124,7 @@ export default {
     const pageSize = ref(6);
     const localItems = ref([]);
 
-  // rebuild localItems and reset pagination from source list
+
     const resetLocal = (src) => { const arr = (src || []).filter(i => i.is_available || i.available).map(i => ({ ...i, checked: false, quantity: 0 })); localItems.value = arr; page.value = 1; };
     watch(() => props.menuItems, (nv) => { resetLocal(nv); }, { immediate: true });
     watch(
@@ -147,14 +147,12 @@ export default {
     const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize.value)));
     const pagedItems = computed(() => filteredItems.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
 
-  // pagination next
+
     const nextPage = () => { if (page.value < totalPages.value) page.value++; };
 
-  // pagination prev
     const prevPage = () => { if (page.value > 1) page.value--; };
     const totalAmount = computed(() => (localItems.value || []).filter(i => i.checked && (i.quantity || 0) > 0).reduce((sum, i) => sum + Number(i.price) * (i.quantity || 0), 0));
 
-  // fetch reserve slots and current priority count
     async function refreshPriorityState(){
       try {
           const s = await getSettings();
@@ -172,13 +170,10 @@ export default {
     watch(() => props.isOpen, (open) => { if (open) refreshPriorityState(); });
     watch(() => form.value.isPriority, (on) => { if (on) refreshPriorityState(); });
 
-  // whether current input respects priority capacity
     function canBePriority(){ if (!form.value.isPriority) return true; if (reserveSlots.value <= 0) return false; return priorityCount.value < reserveSlots.value; }
-  // validate form inputs
   const validate = () => { errors.value = { customerName: '', contactNumber: '', option: '', partySize: '' }; if (!form.value.customerName || !String(form.value.customerName).trim()) errors.value.customerName = 'Customer name is required'; else if (String(form.value.customerName).trim().length > 10) errors.value.customerName = 'Name must be at most 10 characters'; const phone = String(form.value.contactNumber || '').replace(/\D/g, ''); if (!phone) errors.value.contactNumber = 'Contact number is required'; else if (!(phone.length === 11 && phone.startsWith('09'))) errors.value.contactNumber = 'Enter a valid PH phone (11 digits starting with 09)'; if (!props.isServiceBased && !form.value.option) errors.value.option = 'Select dine-in or take-out'; if (!props.isServiceBased && form.value.option === 'dineIn') { const ps = Number(form.value.partySize || 0); if (!ps || ps < 1) errors.value.partySize = 'Party size must be at least 1'; } return Object.values(errors.value).every(v => !v); };
     const priorityCapReached = computed(() => form.value.isPriority && reserveSlots.value > 0 && priorityCount.value >= reserveSlots.value);
     const canSubmit = computed(() => validate() && totalAmount.value > 0 && canBePriority());
-// Handles clear Field Server Error
     function clearFieldServerError(){  }
     return { form, formatPeso, localItems, searchTerm, filteredItems, pagedItems, page, totalPages, nextPage, prevPage, totalAmount, errors, reserveSlots, priorityCount, canSubmit, priorityCapReached, firstField, refreshPriorityState, touched, submitAttempted, clearFieldServerError };
   },
@@ -191,7 +186,6 @@ export default {
       }
       this.submitAttempted = true;
       if (!this.canSubmit) { return; }
-      // build selectedItems payload and emit add-customer
       const selectedItems = (this.localItems || [])
         .filter(i => i.checked && (i.quantity || 0) > 0)
         .map(i => ({ id: i.id, name: i.name, price: i.price, quantity: Math.max(1, Number(i.quantity||1)) }));
