@@ -98,6 +98,19 @@ if (hasClientBuild) {
 	app.get('/', (req, res) => {
 		res.status(200).send('<!doctype html><title>QueueMe API</title><meta name="robots" content="noindex"><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:2rem;line-height:1.5}</style><h1>QueueMe backend is running</h1><p>No frontend build found at <code>client-side/dist</code>.</p><p>API health: <a href="/api/health/healthz">/api/health/healthz</a> | <a href="/api/health/ping">/api/health/ping</a></p>');
 	});
+	// Fallback for any non-API route when no client build is present
+	app.get(/^\/(?!api\/).*/, (req, res) => {
+		const front = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+		if (front) {
+			return res.redirect(302, `${front}${req.originalUrl}`);
+		}
+		res.status(200).send(`<!doctype html>
+		  <meta name="robots" content="noindex">
+		  <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:2rem;line-height:1.5}</style>
+		  <h2>QueueMe backend is running</h2>
+		  <p>No frontend build found. This route is available only when the SPA is built.</p>
+		  <p>Try the API health: <a href="/api/health/healthz">/api/health/healthz</a></p>`);
+	});
 }
 
 app.use((req,res)=>{ res.status(404).json({ success:false, message:'Not Found'}); });
