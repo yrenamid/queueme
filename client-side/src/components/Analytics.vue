@@ -180,8 +180,28 @@ export default {
           plugins: { legend: { position: 'bottom' }, tooltip: { enabled: true, mode: 'index', intersect: false, callbacks: { label: (ctx) => { const dsLabel = ctx.dataset.label || ''; const v = ctx.parsed.y; if (ctx.dataset.yAxisID === 'y-waitTime') { return `${dsLabel}: ${v} min`; } return `${dsLabel}: ${v}`; } } } },
           interaction: { mode: 'index', intersect: false }, hover: { mode: 'index', intersect: false },
           scales: {
-            'y-customers': { type: 'linear', position: 'left', ticks: { color: '#F47007' } },
-            'y-waitTime': { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#606C38', callback: (v) => `${v} min` }, title: { display: true, text: 'Average Wait (minutes)' } }
+            'y-customers': {
+              type: 'linear',
+              position: 'left',
+              beginAtZero: true,
+              ticks: {
+                color: '#F47007',
+                stepSize: 1,
+                precision: 0,
+                callback: (v) => Number.isInteger(v) ? v : ''
+              }
+            },
+            'y-waitTime': {
+              type: 'linear',
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: '#606C38',
+                stepSize: 5,
+                callback: (v) => `${v} min`
+              },
+              title: { display: true, text: 'Average Wait (minutes)' }
+            }
           }
         }
       });
