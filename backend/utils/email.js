@@ -27,12 +27,7 @@ async function sendEmail({ to, subject, text, html, replyTo, categories }) {
     console.warn('[email] SendGrid not configured; skipping email to', to);
     return { skipped: true };
   }
-  const from = process.env.EMAIL_FROM || 'QueueMe <queueme123@gmail.com>'; 
-  const fromDomain = String(from).split('@').pop()?.replace('>', '').trim().toLowerCase();
-  const freeDomains = ['gmail.com','yahoo.com','outlook.com','hotmail.com','live.com'];
-  if (fromDomain && freeDomains.includes(fromDomain)) {
-    console.warn('[email] Using a free mailbox domain as From can cause spam/DMARC issues:', fromDomain);
-  }
+  const from = process.env.EMAIL_FROM || 'QueueMe <noreply@queueme.email>';
   const safeText = text || htmlToText(html);
   const msg = {
     to,
