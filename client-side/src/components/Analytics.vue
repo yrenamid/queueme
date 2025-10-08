@@ -127,10 +127,38 @@ export default {
     async function fetchSeries() {
       const params = { range: range.value };
       const { data } = await api.get('/analytics/series', { params: { ...params, _t: Date.now() } });
-      if (data?.success) {
-        renderChart(data.data.labels, data.data.servedCounts, data.data.avgWaits);
+      if (!data?.success) return;
 
-        dateLabel.value = `${data.data.start.split(' ')[0]} → ${data.data.end.split(' ')[0]}`;
+      const d = data.data;
+      dateLabel.value = `${d.start.split(' ')[0]} → ${d.end.split(' ')[0]}`;
+
+      if (Array.isArray(d.events) && d.granularity === 'hour') {
+        const servedByHour = Array(24).fill(0);
+        const waitsByHour = Array(24).fill(0);
+        const countsByHour = Array(24).fill(0);
+
+        for (const ev of d.events) {
+          if (ev.type === 'served' && ev.served_at) {
+            const served = new Date(ev.served_at);
+            const h = served.getHours();
+            servedByHour[h] += 1;
+            const joined = ev.joined_at ? new Date(ev.joined_at) : served;
+            const mins = Math.max(0, Math.round((served.getTime() - joined.getTime())/60000));
+            waitsByHour[h] += mins;
+            countsByHour[h] += 1;
+          }
+        }
+
+        const labels = Array.from({ length: 24 }, (_, h) => {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const hr = ((h + 11) % 12) + 1;
+          return `${hr}${ampm}`;
+        });
+        const servedCounts = servedByHour;
+        const avgWaits = countsByHour.map((c, i) => (c ? Math.round(waitsByHour[i] / c) : 0));
+        renderChart(labels, servedCounts, avgWaits);
+      } else {
+        renderChart(d.labels, d.servedCounts, d.avgWaits);
       }
     }
 

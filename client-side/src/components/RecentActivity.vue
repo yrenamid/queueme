@@ -33,7 +33,8 @@ export default {
   setup() {
   const items = ref([]);
     const businessId = (typeof window !== 'undefined') ? localStorage.getItem('businessId') : null;
-    const STORAGE_KEY = `recentActivity:${businessId || 'anon'}`;
+  const STORAGE_KEY = `recentActivity:${businessId || 'anon'}`;
+  const CLEARED_AT_KEY = `${STORAGE_KEY}:clearedAt`;
     const MAX_ITEMS = 10;
     let offJoin, offStatus; let tick;
 
@@ -62,9 +63,17 @@ export default {
       persist();
     }
 
-    function clearAll() {
+    async function clearAll() {
       items.value = [];
-  try { localStorage.removeItem(STORAGE_KEY); } catch (err) { console.debug('[recent-activity] failed to clear storage', err); }
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem(CLEARED_AT_KEY, String(Date.now()));
+      } catch (err) { console.debug('[recent-activity] failed to clear storage', err); }
+      try {
+        await fetch('/api/analytics/activity/clear', { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` } });
+      } catch (err) {
+        console.debug('[recent-activity] backend clear not available', err);
+      }
     }
 
     function timeAgo(ts) {
@@ -90,12 +99,20 @@ export default {
         if (STORAGE_KEY !== legacy) localStorage.removeItem(legacy);
   } catch (err) { console.debug('[recent-activity] error while updating activity', err); }
 
+      let clearedAt = 0;
+      try {
+        clearedAt = Number(localStorage.getItem(CLEARED_AT_KEY) || '0') || 0;
+      } catch (err) { console.debug('[recent-activity] failed reading clearedAt', err); }
+
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            items.value = parsed.slice(0, MAX_ITEMS).map(it => ({
+            items.value = parsed
+              .filter(it => !clearedAt || Number(it.time) >= clearedAt)
+              .slice(0, MAX_ITEMS)
+              .map(it => ({
               id: it.id,
               queue_number: it.queue_number,
               customer_name: it.customer_name,
@@ -109,7 +126,8 @@ export default {
       try {
         const backendItems = await apiGetRecentActivity();
         if (Array.isArray(backendItems)) {
-          const merged = [...backendItems, ...items.value];
+          const filteredBackend = backendItems.filter(it => !clearedAt || Number(it.time) >= clearedAt);
+          const merged = [...filteredBackend, ...items.value];
 
           const seen = new Set();
           const unique = [];

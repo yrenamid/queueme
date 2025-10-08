@@ -11,7 +11,7 @@
             />
             <p class="fname">{{ businessName }}</p>
           </div>
-          <div>
+          <div class="text-[#1f2937] bg-white/80 px-2 py-0.5 rounded-sm border border-gray-200 shadow-sm">
             {{ currentTime }}
           </div>
           <div class="flex justify-center items-center gap-2">

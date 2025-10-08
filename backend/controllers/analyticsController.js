@@ -167,8 +167,21 @@ async function getAnalyticsSeries(req, res) {
     }
 
 
+    // Served events within range
     const rows = await query(
       'SELECT served_at, COALESCE(waiting_at, created_at) AS joined_at FROM queues WHERE business_id=? AND status="served" AND served_at BETWEEN ? AND ? ORDER BY served_at ASC',
+      [businessId, fmt(start), fmt(end)]
+    );
+
+    // Cancelled events within range
+    const cancelledRows = await query(
+      'SELECT updated_at AS cancelled_at, COALESCE(waiting_at, created_at) AS joined_at FROM queues WHERE business_id=? AND status="cancelled" AND updated_at BETWEEN ? AND ? ORDER BY updated_at ASC',
+      [businessId, fmt(start), fmt(end)]
+    );
+
+    // Joined events within range (entered the queue)
+    const joinedRows = await query(
+      'SELECT COALESCE(waiting_at, created_at) AS joined_at FROM queues WHERE business_id=? AND COALESCE(waiting_at, created_at) BETWEEN ? AND ? ORDER BY COALESCE(waiting_at, created_at) ASC',
       [businessId, fmt(start), fmt(end)]
     );
 
@@ -229,7 +242,19 @@ async function getAnalyticsSeries(req, res) {
       }
     }
 
-    return res.json({ success:true, data: { labels, servedCounts, avgWaits, granularity, range, start: fmt(start), end: fmt(end) } });
+
+    const events = [];
+    for (const r of rows) {
+      if (r.served_at) events.push({ type: 'served', served_at: r.served_at, joined_at: r.joined_at || null });
+    }
+    for (const r of cancelledRows) {
+      if (r.cancelled_at) events.push({ type: 'cancelled', cancelled_at: r.cancelled_at, joined_at: r.joined_at || null });
+    }
+    for (const r of joinedRows) {
+      if (r.joined_at) events.push({ type: 'joined', joined_at: r.joined_at });
+    }
+
+    return res.json({ success:true, data: { labels, servedCounts, avgWaits, granularity, range, start: fmt(start), end: fmt(end), events } });
   } catch (e) {
     console.error('[analytics][series]', e);
     res.status(500).json({ success:false, message:'Server error' });
