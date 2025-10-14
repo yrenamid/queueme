@@ -12,21 +12,21 @@
           <div class="flex flex-col md:col-span-2">
             <label class="text-xs mb-1 text-white/90">Current Password</label>
             <div class="relative">
-              <input :type="showCurrent ? 'text' : 'password'" v-model="current" class="w-full rounded text-[#222222] px-2 py-2 text-sm bg-[#f9f9f1] placeholder:text-[#6b7280] pr-10" placeholder="••••••••" />
+              <input :type="showCurrent ? 'text' : 'password'" v-model="current" autocomplete="current-password" class="w-full rounded text-[#222222] px-2 py-2 text-sm bg-[#f9f9f1] placeholder:text-[#6b7280] pr-10" placeholder="••••••••" />
               <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-[#283618] text-xs underline" @click="showCurrent = !showCurrent">{{ showCurrent ? 'Hide' : 'Show' }}</button>
             </div>
           </div>
           <div class="flex flex-col">
             <label class="text-xs mb-1 text-white/90">New Password</label>
             <div class="relative">
-              <input :type="showNew ? 'text' : 'password'" v-model="password" class="w-full rounded text-[#222222] px-2 py-2 text-sm bg-[#f9f9f1] placeholder:text-[#6b7280] pr-10" placeholder="••••••••" />
+              <input :type="showNew ? 'text' : 'password'" v-model="password" autocomplete="new-password" class="w-full rounded text-[#222222] px-2 py-2 text-sm bg-[#f9f9f1] placeholder:text-[#6b7280] pr-10" placeholder="••••••••" />
               <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-[#283618] text-xs underline" @click="showNew = !showNew">{{ showNew ? 'Hide' : 'Show' }}</button>
             </div>
           </div>
           <div class="flex flex-col">
             <label class="text-xs mb-1 text-white/90">Confirm Password</label>
             <div class="relative">
-              <input :type="showConfirm ? 'text' : 'password'" v-model="confirm" class="w-full rounded text-[#222222] px-2 py-2 text-sm bg-[#f9f9f1] placeholder:text-[#6b7280] pr-10" placeholder="••••••••" />
+              <input :type="showConfirm ? 'text' : 'password'" v-model="confirm" autocomplete="new-password" class="w-full rounded text-[#222222] px-2 py-2 text-sm bg-[#f9f9f1] placeholder:text-[#6b7280] pr-10" placeholder="••••••••" />
               <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-[#283618] text-xs underline" @click="showConfirm = !showConfirm">{{ showConfirm ? 'Hide' : 'Show' }}</button>
             </div>
           </div>

@@ -27,6 +27,26 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
   try {
     const totalRows = await query(`SELECT COUNT(*) as cnt FROM businesses b ${whereSql}`, params);
     const total = Number(totalRows?.[0]?.cnt || 0);
+
+    const colCheck = async (table, col) => {
+      try {
+        const r = await query(
+          'SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+          [table, col]
+        );
+        return Number(r?.[0]?.cnt || 0) > 0;
+      } catch (e) {
+        console.warn('[admin businesses] information_schema unavailable for', table, col, e?.message || e);
+        return false;
+      }
+    };
+  const hasProofUrl = await colCheck('businesses', 'proof_url');
+  const hasAvgPrepTime = await colCheck('businesses', 'avg_prep_time');
+  const hasQrCodeUrl = await colCheck('businesses', 'qr_code_url');
+    const hasAllowDelay = await colCheck('settings', 'allow_delay');
+    const hasAllowOnline = await colCheck('settings', 'allow_online_payment');
+  const hasNotifyCustomer = await colCheck('settings', 'notify_customer');
+
     const globalRows = await query(`SELECT 
         COUNT(*) AS total,
         SUM(CASE WHEN LOWER(category) = 'food' THEN 1 ELSE 0 END) AS food,
@@ -37,17 +57,39 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
       food: Number(globalRows?.[0]?.food || 0),
       service: Number(globalRows?.[0]?.service || 0)
     };
-    const rows = await query(
-      `SELECT b.id, b.name, b.email, b.phone, b.category, b.slug, b.created_at, b.max_queue_length, b.avg_prep_time, b.qr_code_url, b.proof_url,
-              s.reserve_slots, s.notify_customer, s.available_kitchen_staff, s.allow_delay, s.allow_online_payment,
-        (SELECT u.email FROM users u WHERE u.business_id = b.id AND u.role = 'owner' ORDER BY u.id ASC LIMIT 1) AS owner_email
-       FROM businesses b
-       LEFT JOIN settings s ON s.business_id = b.id
-       ${whereSql}
-       ORDER BY b.created_at DESC
-       LIMIT ? OFFSET ?`,
-       [...params, ps, offset]
-    );
+
+    const bizFields = ['b.id','b.name','b.email','b.phone','b.category','b.slug','b.created_at','b.max_queue_length'];
+    if (hasAvgPrepTime) bizFields.push('b.avg_prep_time');
+    if (hasQrCodeUrl) bizFields.push('b.qr_code_url');
+    if (hasProofUrl) bizFields.push('b.proof_url');
+
+    const settingsFields = ['s.reserve_slots','s.available_kitchen_staff'];
+    if (hasNotifyCustomer) settingsFields.push('s.notify_customer');
+    if (hasAllowDelay) settingsFields.push('s.allow_delay');
+    if (hasAllowOnline) settingsFields.push('s.allow_online_payment');
+
+    const selectSql = `SELECT 
+      ${bizFields.join(', ')},
+      ${settingsFields.join(', ')},
+      (SELECT u.email FROM users u WHERE u.business_id = b.id AND u.role = 'owner' ORDER BY u.id ASC LIMIT 1) AS owner_email
+      FROM businesses b
+      LEFT JOIN settings s ON s.business_id = b.id
+      ${whereSql}
+      ORDER BY b.created_at DESC
+      LIMIT ? OFFSET ?`;
+
+    let rows;
+    try {
+      rows = await query(selectSql, [...params, ps, offset]);
+    } catch (e) {
+      if (String(e?.code) === 'ER_BAD_FIELD_ERROR') {
+        const minimalSql = `SELECT b.id, b.name, b.email, b.phone, b.category, b.slug, b.created_at
+          FROM businesses b ${whereSql} ORDER BY b.created_at DESC LIMIT ? OFFSET ?`;
+        rows = await query(minimalSql, [...params, ps, offset]);
+      } else {
+        throw e;
+      }
+    }
     return res.json({ success: true, data: { total, page: p, pageSize: ps, rows, global } });
   } catch (err) {
     console.error('[admin businesses]', err);
