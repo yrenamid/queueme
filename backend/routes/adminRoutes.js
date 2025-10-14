@@ -40,12 +40,25 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
         return false;
       }
     };
-  const hasProofUrl = await colCheck('businesses', 'proof_url');
-  const hasAvgPrepTime = await colCheck('businesses', 'avg_prep_time');
-  const hasQrCodeUrl = await colCheck('businesses', 'qr_code_url');
-    const hasAllowDelay = await colCheck('settings', 'allow_delay');
-    const hasAllowOnline = await colCheck('settings', 'allow_online_payment');
-  const hasNotifyCustomer = await colCheck('settings', 'notify_customer');
+    const tableCheck = async (table) => {
+      try {
+        const r = await query(
+          'SELECT COUNT(*) as cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+          [table]
+        );
+        return Number(r?.[0]?.cnt || 0) > 0;
+      } catch (e) {
+        console.warn('[admin businesses] information_schema TABLES unavailable for', table, e?.message || e);
+        return false;
+      }
+    };
+    const hasProofUrl = await colCheck('businesses', 'proof_url');
+    const hasAvgPrepTime = await colCheck('businesses', 'avg_prep_time');
+    const hasQrCodeUrl = await colCheck('businesses', 'qr_code_url');
+    const hasSettingsTable = await tableCheck('settings');
+    const hasAllowDelay = hasSettingsTable && await colCheck('settings', 'allow_delay');
+    const hasAllowOnline = hasSettingsTable && await colCheck('settings', 'allow_online_payment');
+    const hasNotifyCustomer = hasSettingsTable && await colCheck('settings', 'notify_customer');
 
     const globalRows = await query(`SELECT 
         COUNT(*) AS total,
@@ -63,17 +76,26 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
     if (hasQrCodeUrl) bizFields.push('b.qr_code_url');
     if (hasProofUrl) bizFields.push('b.proof_url');
 
-    const settingsFields = ['s.reserve_slots','s.available_kitchen_staff'];
-    if (hasNotifyCustomer) settingsFields.push('s.notify_customer');
-    if (hasAllowDelay) settingsFields.push('s.allow_delay');
-    if (hasAllowOnline) settingsFields.push('s.allow_online_payment');
+    const settingsFields = [];
+    if (hasSettingsTable) {
+      settingsFields.push('s.reserve_slots','s.available_kitchen_staff');
+      if (hasNotifyCustomer) settingsFields.push('s.notify_customer');
+      if (hasAllowDelay) settingsFields.push('s.allow_delay');
+      if (hasAllowOnline) settingsFields.push('s.allow_online_payment');
+    }
+
+    const selectParts = [];
+    selectParts.push(bizFields.join(', '));
+    if (settingsFields.length) selectParts.push(settingsFields.join(', '));
+    selectParts.push(`(SELECT u.email FROM users u WHERE u.business_id = b.id AND u.role = 'owner' ORDER BY u.id ASC LIMIT 1) AS owner_email`);
+
+    const joins = [];
+    if (hasSettingsTable) joins.push('LEFT JOIN settings s ON s.business_id = b.id');
 
     const selectSql = `SELECT 
-      ${bizFields.join(', ')},
-      ${settingsFields.join(', ')},
-      (SELECT u.email FROM users u WHERE u.business_id = b.id AND u.role = 'owner' ORDER BY u.id ASC LIMIT 1) AS owner_email
+      ${selectParts.join(', ')}
       FROM businesses b
-      LEFT JOIN settings s ON s.business_id = b.id
+      ${joins.join(' ')}
       ${whereSql}
       ORDER BY b.created_at DESC
       LIMIT ? OFFSET ?`;
@@ -82,7 +104,8 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
     try {
       rows = await query(selectSql, [...params, ps, offset]);
     } catch (e) {
-      if (String(e?.code) === 'ER_BAD_FIELD_ERROR') {
+      const code = String(e?.code || '');
+      if (code === 'ER_BAD_FIELD_ERROR' || code === 'ER_NO_SUCH_TABLE') {
         const minimalSql = `SELECT b.id, b.name, b.email, b.phone, b.category, b.slug, b.created_at
           FROM businesses b ${whereSql} ORDER BY b.created_at DESC LIMIT ? OFFSET ?`;
         rows = await query(minimalSql, [...params, ps, offset]);
