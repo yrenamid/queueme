@@ -94,7 +94,7 @@
                   <td class="p-3 whitespace-nowrap overflow-hidden text-ellipsis" :title="row.owner_email || ''">{{ row.owner_email || '' }}</td>
                   <td class="p-3 whitespace-nowrap overflow-hidden text-ellipsis" :title="new Date(row.created_at).toLocaleString()">{{ new Date(row.created_at).toLocaleString() }}</td>
                   <td class="p-3">
-                    <a v-if="row.proof_url" :href="row.proof_url" target="_blank" class="inline-flex items-center gap-1 text-[#FEFAE0] hover:text-white underline underline-offset-2" title="Open proof">
+                    <a v-if="row.proof_url" :href="row.proof_url" target="_blank" class="inline-flex items-center gap-1 sa-proof-link underline underline-offset-2" title="Open proof">
                       <ion-icon :icon="attachOutline"></ion-icon>
                       View
                     </a>
@@ -162,7 +162,6 @@ export default {
     const prevPage = () => { if (page.value > 1) { page.value--; load(); } };
     const nextPage = () => { if (page.value * pageSize.value < total.value) { page.value++; load(); } };
     const exportAll = async () => {
-      // Export all businesses by paging through all results
   const headers = ['Name','Email','Phone','Category','Owner Email','Created'];
       const items = [];
       let p = 1; const ps = 200; let fetched = 0;
@@ -202,6 +201,9 @@ export default {
 <style scoped>
 ion-header, ion-toolbar { --background:#283618 !important; box-shadow:none !important; }
 ion-content { --background:#FEFAE0 !important; }
+a.sa-proof-link { color:#FEFAE0 !important; }
+a.sa-proof-link:visited { color:#FEFAE0 !important; }
+a.sa-proof-link:hover, a.sa-proof-link:focus { color:#ffffff !important; }
 </style>
 
 <style>
