@@ -98,17 +98,17 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
       ${joins.join(' ')}
       ${whereSql}
       ORDER BY b.created_at DESC
-      LIMIT ? OFFSET ?`;
+      LIMIT ${ps} OFFSET ${offset}`;
 
     let rows;
     try {
-      rows = await query(selectSql, [...params, ps, offset]);
+      rows = await query(selectSql, params);
     } catch (e) {
       const code = String(e?.code || '');
       if (code === 'ER_BAD_FIELD_ERROR' || code === 'ER_NO_SUCH_TABLE') {
         const minimalSql = `SELECT b.id, b.name, b.email, b.phone, b.category, b.slug, b.created_at
-          FROM businesses b ${whereSql} ORDER BY b.created_at DESC LIMIT ? OFFSET ?`;
-        rows = await query(minimalSql, [...params, ps, offset]);
+          FROM businesses b ${whereSql} ORDER BY b.created_at DESC LIMIT ${ps} OFFSET ${offset}`;
+        rows = await query(minimalSql, params);
       } else {
         throw e;
       }
