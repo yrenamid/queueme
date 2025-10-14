@@ -42,3 +42,48 @@
   color: #283618;
 }
 
+
+ion-select-popover,
+ion-popover::part(content) {
+  --ion-background-color: #ffffff !important;
+  --ion-text-color: #111827 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* Inner containers */
+ion-select-popover ion-content,
+ion-select-popover ion-list,
+ion-popover ion-content,
+ion-popover .popover-viewport {
+  --background: #ffffff !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* Items and labels */
+ion-select-popover ion-item {
+  --background: #ffffff !important;
+  --color: #111827 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+ion-select-popover ion-label {
+  --color: #111827 !important;
+  color: #111827 !important;
+}
+
+
+ion-popover .select-interface-option,
+ion-select-popover .select-interface-option {
+  color: #111827 !important;
+}
+ion-select-popover .select-interface-option[aria-checked="true"] {
+  background: #f3f4f6 !important; 
+}
+ion-select-popover .select-interface-option:hover {
+  background: #f9fafb !important; 
+}
+
+
+

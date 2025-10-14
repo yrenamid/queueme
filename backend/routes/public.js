@@ -371,7 +371,7 @@ router.post('/request-more-time', async (req, res) => {
 
 router.post('/pay/initiate', async (req, res) => {
   try {
-    const { business_id, id, queue_number } = req.body || {};
+    const { business_id, id, queue_number, customer_name, customer_email, customer_phone } = req.body || {};
     const businessId = Number(business_id);
     const idNum = (id != null ? Number(id) : null);
     const qn = (queue_number != null ? Number(queue_number) : null);
@@ -380,8 +380,8 @@ router.post('/pay/initiate', async (req, res) => {
 
 
     let rows;
-    if (idNum) rows = await query('SELECT id, queue_number, order_total FROM queues WHERE business_id=? AND id=?', [businessId, idNum]);
-    else rows = await query('SELECT id, queue_number, order_total FROM queues WHERE business_id=? AND queue_number=? ORDER BY id DESC LIMIT 1', [businessId, qn]);
+  if (idNum) rows = await query('SELECT id, queue_number, order_total, customer_name, customer_email, customer_phone FROM queues WHERE business_id=? AND id=?', [businessId, idNum]);
+  else rows = await query('SELECT id, queue_number, order_total, customer_name, customer_email, customer_phone FROM queues WHERE business_id=? AND queue_number=? ORDER BY id DESC LIMIT 1', [businessId, qn]);
     const row = rows && rows[0];
     if (!row) return res.status(404).json({ success:false, message:'Not found' });
 
@@ -403,38 +403,77 @@ router.post('/pay/initiate', async (req, res) => {
     const cancelUrl = `${baseUrl}/api/public/pay/cancel?business_id=${businessId}&id=${row.id}&qn=${row.queue_number}`;
 
     try {
-      const payload = {
-        data: {
-          attributes: {
-            line_items: [
-              { name: `Order #${row.queue_number}`, amount, currency: 'PHP', quantity: 1 },
-            ],
-            payment_method_types: ['gcash','paymaya'],
-
-            description: `BIZ:${businessId};ID:${row.id};QN:${row.queue_number}`,
-            metadata: {
-              business_id: String(businessId),
-              id: String(row.id),
-              queue_number: String(row.queue_number)
-            },
-            show_line_items: true,
-            show_description: true,
-            send_email_receipt: false,
-            success_url: successUrl,
-            cancel_url: cancelUrl,
-          }
-        }
-      };
-      const resp = await axios.post('https://api.paymongo.com/v1/checkout_sessions', payload, {
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
-          'Content-Type': 'application/json'
+      const baseAttributes = {
+        line_items: [ { name: `Order #${row.queue_number}`, amount, currency: 'PHP', quantity: 1 } ],
+        payment_method_types: ['gcash','paymaya'],
+        description: `BIZ:${businessId};ID:${row.id};QN:${row.queue_number}`,
+        metadata: {
+          business_id: String(businessId),
+          id: String(row.id),
+          queue_number: String(row.queue_number)
         },
-        timeout: 15000,
+        show_line_items: true,
+        show_description: true,
+        send_email_receipt: false,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      };
+
+      const nameVal = String((customer_name ?? row.customer_name) || '').trim();
+      const emailVal = String((customer_email ?? row.customer_email) || '').trim();
+      const phoneRaw = String((customer_phone ?? row.customer_phone) || '').trim();
+      const toPH = (p) => {
+        try {
+          const s = String(p || '').replace(/\s+/g, '');
+          if (!s) return '';
+          if (s.startsWith('+63')) return s;
+          if (s.startsWith('09') && s.length === 11) return '+63' + s.slice(1);
+          if (s.startsWith('9') && s.length === 10) return '+63' + s;
+          return s; // leave as-is
+        } catch { return String(p || ''); }
+      };
+      const phoneVal = toPH(phoneRaw);
+
+      const attempts = [];
+      // Attempt 1: attributes.billing (as reflected in webhook payloads)
+      attempts.push({
+        data: { attributes: { ...baseAttributes, billing: { name: nameVal, email: emailVal, phone: phoneVal } } }
       });
-      const payment_url = resp?.data?.data?.attributes?.checkout_url;
-      if (!payment_url) throw new Error('Bad response from PayMongo');
-      return res.json({ success:true, data: { payment_url, amount: Number(row.order_total)||0 } });
+      // Attempt 2: attributes.customer
+      attempts.push({
+        data: { attributes: { ...baseAttributes, customer: { name: nameVal, email: emailVal, phone: phoneVal } } }
+      });
+      // Attempt 3: attributes.customer_details
+      attempts.push({
+        data: { attributes: { ...baseAttributes, customer_details: { name: nameVal, email: emailVal, phone: phoneVal } } }
+      });
+      // Attempt 4: omit customer info
+      attempts.push({ data: { attributes: { ...baseAttributes } } });
+
+      let lastErr = null;
+      for (const payload of attempts) {
+        try {
+          const resp = await axios.post('https://api.paymongo.com/v1/checkout_sessions', payload, {
+            headers: {
+              Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 15000,
+          });
+          const payment_url = resp?.data?.data?.attributes?.checkout_url;
+          if (!payment_url) throw new Error('Bad response from PayMongo');
+          return res.json({ success:true, data: { payment_url, amount: Number(row.order_total)||0 } });
+        } catch (e) {
+          lastErr = e;
+          const status = e?.response?.status;
+          const data = e?.response?.data;
+          console.error('[public][pay][initiate] attempt failed', status, data || e?.message || e);
+          // If 5xx, break early to avoid retrying with same outage
+          if (status >= 500) break;
+          // else continue to next attempt
+        }
+      }
+      throw lastErr || new Error('Failed to create checkout session');
     } catch (err) {
       console.error('[public][pay][initiate] PayMongo error:', err?.response?.data || err?.message || err);
       return res.status(503).json({ success:false, message:'Online payments are not available. Please pay at the counter.', code:'PAYMENTS_UNAVAILABLE' });

@@ -129,9 +129,16 @@ export default {
         if (resp.user?.slug) {
           localStorage.setItem('businessSlug', String(resp.user.slug));
         }
-        const slug = resp.user?.slug || localStorage.getItem('businessSlug');
-        console.debug('[login] slug from response/localStorage =', slug);
-        const target = slug ? `/dashboard/${slug}` : '/home';
+        // If super admin, go to Super Admin dashboard regardless of slug
+        const isAdmin = String(resp?.user?.is_admin || localStorage.getItem('is_admin') || '0') === '1';
+        let target = '/home';
+        if (isAdmin) {
+          target = '/super-admin';
+        } else {
+          const slug = resp.user?.slug || localStorage.getItem('businessSlug');
+          console.debug('[login] slug from response/localStorage =', slug);
+          target = slug ? `/dashboard/${slug}` : '/home';
+        }
         console.debug('[login] navigating to', target);
         this.router.push(target);
       } catch (e) {

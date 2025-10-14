@@ -19,7 +19,12 @@ api.interceptors.request.use((config: any) => {
 // Handles register Business
 export async function registerBusiness(payload: any) {
   try {
-    const { data } = await api.post('/auth/register', payload, { timeout: 10000 });
+    const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
+    const config: any = { timeout: 10000 };
+    if (isFormData) {
+      config.headers = { 'Content-Type': 'multipart/form-data' };
+    }
+    const { data } = await api.post('/auth/register', payload, config);
     if (data.success && data.data) {
       return data.data;
     }
@@ -48,6 +53,7 @@ export async function login(email: string, password: string) {
       if (data.user?.business_id) localStorage.setItem('businessId', String(data.user.business_id));
       if (data.user?.slug) localStorage.setItem('businessSlug', String(data.user.slug));
       if (data.user?.role) localStorage.setItem('role', String(data.user.role));
+      if (data.user?.is_admin != null) localStorage.setItem('is_admin', String(data.user.is_admin ? 1 : 0));
       if (data.qr?.qr_code_img) localStorage.setItem('qrImage', data.qr.qr_code_img);
       if (data.qr?.qr_code_url) localStorage.setItem('qrUrl', data.qr.qr_code_url);
       return data;
@@ -146,7 +152,7 @@ export async function requestMoreTime(payload: { business_id: number; id?: numbe
 
 
 // Handles initiate Payment
-export async function initiatePayment(payload: { business_id: number; id?: number; queue_number?: number }) {
+export async function initiatePayment(payload: { business_id: number; id?: number; queue_number?: number; customer_name?: string; customer_email?: string; customer_phone?: string }) {
   const { data } = await api.post('/public/pay/initiate', payload);
   if (data.success) return data.data as { payment_url: string; amount: number };
   throw new Error(data.message || 'Failed to initiate payment');
@@ -403,6 +409,26 @@ export async function getQueueSummary() {
   const { data } = await api.get('/analytics/queue-summary', { params: { _t: Date.now() } });
   if (data.success) return data.data as { inQueue: number; avgWait: number; completedToday: number; cancelled: number };
   throw new Error(data.message || 'Failed to load queue summary');
+}
+
+
+// Admin endpoints
+export async function adminListBusinesses(params: { search?: string; category?: string; page?: number; pageSize?: number }) {
+  const { data } = await api.get('/admin/businesses', { params: { ...params, _t: Date.now() } });
+  if (data.success) return data.data as { total: number; page: number; pageSize: number; rows: any[]; global?: { total: number; food: number; service: number } };
+  throw new Error(data.message || 'Failed to load admin businesses');
+}
+
+export async function getAdminProfile() {
+  const { data } = await api.get('/admin/profile');
+  if (data.success) return data.data as { id: number; name: string; email: string };
+  throw new Error(data.message || 'Failed to load admin profile');
+}
+
+export async function updateAdminProfile(payload: { name?: string; password?: string }) {
+  const { data } = await api.put('/admin/profile', payload);
+  if (data.success) return true;
+  throw new Error(data.message || 'Failed to update admin profile');
 }
 
 

@@ -133,7 +133,22 @@ export default {
           allow_delay: payloadFromChild.allowDelay === undefined ? 1 : (payloadFromChild.allowDelay ? 1 : 0),
           allow_online_payment: payloadFromChild.allowOnlinePayment ? 1 : 0,
         };
-        const data = await registerBusiness(payload);
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k,v]) => {
+          if (k === 'staff') fd.append('staff', JSON.stringify(v));
+          else fd.append(k, String(v ?? ''));
+        });
+        if (payloadFromChild && payloadFromChild.proofFile) {
+          const file = payloadFromChild.proofFile;
+          const okType = ['image/jpeg','image/png','application/pdf'].includes(file.type);
+          const okSize = file.size <= 5 * 1024 * 1024;
+          if (!okType) throw new Error('File must be JPG, PNG, or PDF');
+          if (!okSize) throw new Error('File must be 5MB or less');
+          fd.append('proof', file);
+        } else {
+          throw new Error('Please upload proof of business registration');
+        }
+        const data = await registerBusiness(fd);
         qrImage.value = data.qr_code_img;
         localStorage.setItem('qrImage', data.qr_code_img);
         localStorage.setItem('businessName', businessName.value);

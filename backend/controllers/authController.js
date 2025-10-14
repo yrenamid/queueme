@@ -10,7 +10,7 @@ const { normalizePhoneDigits, isPasswordStrong, hasNoInternalSpaces, isNotBlank,
 
 // register Business
 async function registerBusiness(req, res) {
-  const { name, email, phone, password, category, staff = [], max_queue_length, reserve_slots, notify_customer, available_kitchen_staff, allow_delay, allow_online_payment } = req.body;
+  let { name, email, phone, password, category, staff = [], max_queue_length, reserve_slots, notify_customer, available_kitchen_staff, allow_delay, allow_online_payment } = req.body;
   console.log('[registerBusiness] incoming', { name, email, phone, category, staffCount: Array.isArray(staff)? staff.length : 'n/a' });
   if (!name || !email || !phone || !password || !category) {
     return res.status(400).json({ success: false, message: 'Missing required business fields' });
@@ -29,17 +29,23 @@ async function registerBusiness(req, res) {
   if (!isValidPHPhone(phoneDigits)) {
     return res.status(400).json({ success: false, message: 'Phone must be a valid 11-digit PH number starting with 09' });
   }
+  if (typeof staff === 'string') {
+    try { staff = JSON.parse(staff); } catch {}
+  }
   if (!Array.isArray(staff) || staff.length === 0) {
     return res.status(400).json({ success: false, message: 'At least one staff (owner) user required' });
   }
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'Proof of business registration is required (JPG/PNG/PDF up to 5MB)' });
+  }
   try {
 
-    const existingBiz = await query('SELECT id FROM businesses WHERE email = ? OR phone = ? OR name = ?', [email, phoneDigits, name]);
+    const existingBiz = await query('SELECT id FROM businesses WHERE email = ? OR name = ?', [email, name]);
     if (existingBiz.length) {
       return res.status(409).json({ success: false, message: 'Business name, email, or phone already exists' });
     }
 
-    const userConflicts = await query('SELECT id FROM users WHERE email = ? OR phone = ?', [email, phoneDigits]);
+    const userConflicts = await query('SELECT id FROM users WHERE email = ?', [email]);
     if (userConflicts.length) {
       return res.status(409).json({ success: false, message: 'Email or phone already used by a user' });
     }
@@ -82,6 +88,16 @@ async function registerBusiness(req, res) {
     const hashedPassword = await bcrypt.hash(password, 10);
   const insertBiz = await query('INSERT INTO businesses (name, email, phone, password, category, slug, max_queue_length) VALUES (?,?,?,?,?,?,?)', [name, email, phoneDigits, hashedPassword, category, slug, max_queue_length || 50]);
     const business_id = insertBiz.insertId;
+
+  try {
+    const f = req.file;
+    if (f && f.filename && f.size != null) {
+      const publicBase = process.env.PUBLIC_BASE_URL || '';
+      const urlPath = `/public/uploads/${encodeURIComponent(f.filename)}`;
+      const finalUrl = publicBase ? `${publicBase.replace(/\/$/, '')}${urlPath}` : urlPath;
+      await query('UPDATE businesses SET proof_url = ? WHERE id = ?', [finalUrl, business_id]);
+    }
+  } catch (e) { console.warn('[registerBusiness] proof save skipped:', e?.message || e); }
 
 
   try {
@@ -139,17 +155,17 @@ async function login(req, res) {
       const match = await bcrypt.compare(password, biz.password);
       if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
       isBusiness = true;
-      userData = { id: biz.id, business_id: biz.id, role: 'owner', name: biz.name, businessName: biz.name, category: biz.category };
+      userData = { id: biz.id, business_id: biz.id, role: 'owner', name: biz.name, businessName: biz.name, category: biz.category, is_admin: 0 };
     } else {
       const staffRows = await query('SELECT u.*, b.name as businessName, b.category FROM users u JOIN businesses b ON b.id = u.business_id WHERE u.email = ?', [email]);
       if (!staffRows.length) return res.status(401).json({ success: false, message: 'Invalid credentials' });
       const staff = staffRows[0];
       const match = await bcrypt.compare(password, staff.password);
       if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      userData = { id: staff.id, business_id: staff.business_id, role: staff.role, name: staff.name, businessName: staff.businessName, category: staff.category };
+      userData = { id: staff.id, business_id: staff.business_id, role: staff.role, name: staff.name, businessName: staff.businessName, category: staff.category, is_admin: staff.is_admin ? 1 : 0 };
     }
 
-    const token = jwt.sign({ id: userData.id, business_id: userData.business_id, role: userData.role }, jwtCfg.secret, { expiresIn: jwtCfg.expiresIn });
+    const token = jwt.sign({ id: userData.id, business_id: userData.business_id, role: userData.role, is_admin: userData.is_admin || 0 }, jwtCfg.secret, { expiresIn: jwtCfg.expiresIn });
     const biz = await query('SELECT slug, qr_code_url, qr_code_img FROM businesses WHERE id = ?', [userData.business_id]);
     if (biz && biz[0] && biz[0].slug) {
       userData.slug = biz[0].slug;

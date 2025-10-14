@@ -730,7 +730,14 @@ export default {
       const id = this.customer?.id ? Number(this.customer.id) : undefined;
       const queue_number = this.customer?.queueNo ? Number(this.customer.queueNo) : undefined;
       const win = window.open('', '_blank');
-      initiatePayment({ business_id, id, queue_number })
+      initiatePayment({
+        business_id,
+        id,
+        queue_number,
+        customer_name: this.customer?.customerName || this.customer?.name || '',
+        customer_email: this.customer?.customerEmail || '',
+        customer_phone: this.customer?.customerNumber || ''
+      })
         .then((resp) => {
           const url = resp?.payment_url;
           if (url) {

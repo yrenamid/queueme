@@ -357,6 +357,71 @@ export default {
   const showRateService = ref(false);
     const showRequestMoreTime = ref(false);
   const { toast } = useToast();
+    const calledNotifyKey = () => {
+      const business_id = Number(route.params.business_id);
+      const id = props.customer?.id ? Number(props.customer.id) : undefined;
+      const queue_number = props.customer?.queueNo ? Number(props.customer.queueNo) : undefined;
+      return `calledNotified:${business_id}:${id ?? queue_number ?? 'unknown'}`;
+    };
+    const hasCalledNotified = () => {
+      try { return localStorage.getItem(calledNotifyKey()) === '1'; }
+      catch(_) { return false; }
+    };
+    const markCalledNotified = () => {
+      try { localStorage.setItem(calledNotifyKey(), '1'); }
+      catch(_) { /* no-op */ }
+    };
+    const clearCalledNotified = () => {
+      try { localStorage.removeItem(calledNotifyKey()); }
+      catch(_) { /* no-op */ }
+    };
+
+    // Lightweight chime using Web Audio API
+    let chimeCtx = null; // AudioContext
+    const playChime = () => {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        chimeCtx = chimeCtx || new AC();
+        if (chimeCtx.state === 'suspended') {
+          chimeCtx.resume().catch(() => {});
+        }
+        const now = chimeCtx.currentTime;
+        const makeTone = (freq, startOffset, duration) => {
+          const osc = chimeCtx.createOscillator();
+          const gain = chimeCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + startOffset);
+          gain.gain.setValueAtTime(0.0001, now + startOffset);
+          gain.gain.exponentialRampToValueAtTime(0.25, now + startOffset + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
+          osc.connect(gain).connect(chimeCtx.destination);
+          osc.start(now + startOffset);
+          osc.stop(now + startOffset + duration + 0.01);
+          setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch(_) { console.debug('[pay-order] chime node disconnect skipped'); } }, (startOffset + duration + 0.05) * 1000);
+        };
+        makeTone(880, 0.0, 0.6);
+        makeTone(660, 0.12, 0.5);
+      } catch(_) { /* ignore */ }
+    };
+
+    const notifyCalledOnce = () => {
+      if (hasCalledNotified()) return;
+      markCalledNotified();
+      try {
+        toast('You are being called now', 'info', 0, {
+          showConfirmButton: true,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#283618',
+          customClass: {
+            popup: 'swal2-toast',
+            confirmButton: 'swal2-confirm text-xs py-1 px-2',
+            title: 'text-sm',
+          },
+        });
+      } catch(_) { console.debug('[pay-order] toast show failed'); }
+      playChime();
+    };
 
     const time = ref("");
     const date = ref("");
@@ -507,7 +572,7 @@ export default {
           if (ev.is_priority != null) isPriority.value = Boolean(ev.is_priority);
 
           const s = String(ev.status || '').toLowerCase();
-          if (s === 'called') toast('You are being called now', 'info');
+          if (s === 'called') notifyCalledOnce();
           if (s === 'called') {
 
             if (ewtTimer) { clearInterval(ewtTimer); ewtTimer = null; }
@@ -521,15 +586,18 @@ export default {
           }
           if (s === 'served') {
             toast('Thank you! Served complete', 'success');
+            clearCalledNotified();
 
             hasDelayed.value = false;
             clearBaseline();
             try { const key = `delayUsed:${business_id}:${id ?? queue_number ?? 'unknown'}`; localStorage.removeItem(key); }
             catch(_) { console.debug('[pay-order] delay flag clear skipped'); }
           }
-          if (s === 'cancelled') { toast('Your queue has been cancelled', 'error'); clearBaseline(); }
+          if (s === 'cancelled') { toast('Your queue has been cancelled', 'error'); clearBaseline(); clearCalledNotified(); }
           if (s === 'delayed') {
             hasDelayed.value = true;
+            // Allow a future call event to notify again
+            clearCalledNotified();
             try { const key = `delayUsed:${business_id}:${id ?? queue_number ?? 'unknown'}`; localStorage.setItem(key, '1'); }
             catch(_) { console.debug('[pay-order] delay flag persist skipped'); }
 
@@ -634,14 +702,15 @@ export default {
                 if (mine.is_priority != null) isPriority.value = Boolean(mine.is_priority);
 
                 if (prev !== next) {
-                  if (next === 'called') toast('You are being called now', 'info');
+                  if (next === 'called') notifyCalledOnce();
                     if (next === 'served') {
                     toast('Thank you! Served complete', 'success');
+                    clearCalledNotified();
                     hasDelayed.value = false;
                     clearBaseline();
                     try { const key = `delayUsed:${business_id}:${id ?? queue_number ?? 'unknown'}`; localStorage.removeItem(key); } catch(err) { console.debug('[pay-order] could not clear delayUsed', err); }
                   }
-                  if (next === 'cancelled') toast('Your queue has been cancelled', 'error');
+                  if (next === 'cancelled') { toast('Your queue has been cancelled', 'error'); clearCalledNotified(); }
                 }
               }
             }
@@ -821,7 +890,14 @@ export default {
       const queue_number = this.customer?.queueNo ? Number(this.customer.queueNo) : undefined;
 
       const win = window.open('', '_blank');
-      initiatePayment({ business_id, id, queue_number })
+      initiatePayment({
+        business_id,
+        id,
+        queue_number,
+        customer_name: this.customer?.customerName || this.customer?.name || '',
+        customer_email: this.customer?.customerEmail || '',
+        customer_phone: this.customer?.customerNumber || ''
+      })
         .then((resp) => {
           const url = resp?.payment_url;
           if (url) {

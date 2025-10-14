@@ -90,6 +90,15 @@
         v-model:allowDelay="queue.allowDelay"
         v-model:allowOnlinePayment="queue.allowOnlinePayment"
       />
+      <div class="border border-white/20 rounded-md p-3 bg-white/5">
+        <label id="poppins" class="block font-semibold mb-2">Business Registration Proof <span class="text-red-300">*</span></label>
+        <p class="text-[12px] opacity-80 mb-3">Upload a clear photo or PDF of your DTI/SEC Certificate or business permit.</p>
+        <div class="flex items-center gap-2">
+          <input type="file" accept=".jpg,.jpeg,.png,.pdf" @change="onFileChange" class="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-[#DDA15E] file:text-white file:cursor-pointer" />
+          <span v-if="fileName" class="text-[12px] opacity-90">{{ fileName }}</span>
+        </div>
+        <p v-if="fileError" class="text-[12px] mt-2 text-red-300">{{ fileError }}</p>
+      </div>
     </div>
 
     <div class="mt-4 flex flex-col md:flex-row gap-2">
@@ -116,6 +125,9 @@ export default {
       editMode: 'add',
     staffForm: { tempId: null, name: '', email: '', password: '', role: 'owner' },
     queue: { maxQueueLength: 50, reserveSlots: 0, notifyCustomer: true, availableKitchenStaff: 1, allowDelay: true, allowOnlinePayment: false },
+      proofFile: null,
+      fileName: '',
+      fileError: '',
       touchedStaff: { name: false, email: false, password: false },
       staffSubmitAttempted: false,
     };
@@ -149,6 +161,10 @@ export default {
     cancelStaffEdit() { this.editing = false; },
     finish() {
       if (!this.canComplete) return;
+      if (!this.proofFile) {
+        this.fileError = 'Please upload proof of business registration';
+        return;
+      }
       const mappedStaff = this.staffList.map(s => ({ name: s.name, email: s.email, password: s.password, role: s.role }));
       this.$emit('submit-registration', {
         staffList: mappedStaff,
@@ -158,7 +174,19 @@ export default {
         availableKitchenStaff: this.queue.availableKitchenStaff,
         allowDelay: !!this.queue.allowDelay,
         allowOnlinePayment: !!this.queue.allowOnlinePayment,
+        proofFile: this.proofFile,
       });
+    },
+    onFileChange(e) {
+      this.fileError = '';
+      const file = e && e.target && e.target.files && e.target.files[0];
+      if (!file) { this.proofFile = null; this.fileName=''; return; }
+      const okType = ['image/jpeg','image/png','application/pdf'].includes(file.type);
+      const okSize = file.size <= 5 * 1024 * 1024;
+      if (!okType) { this.fileError = 'File must be JPG, PNG, or PDF'; this.proofFile = null; this.fileName=''; return; }
+      if (!okSize) { this.fileError = 'File must be 5MB or less'; this.proofFile = null; this.fileName=''; return; }
+      this.proofFile = file;
+      this.fileName = file.name;
     },
     goBack() { this.$emit('go-back'); }
   },

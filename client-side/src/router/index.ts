@@ -6,6 +6,7 @@ import Login from '../views/Login.vue';
 import Dashboard from '../views/Dashboard.vue'
 import CustomerFoodBased from '../views/CustomerFoodBased.vue'
 import CustomerServiceBased from '../views/CustomerServiceBased.vue'
+import SuperAdmin from '../views/SuperAdmin.vue'
 
 // Handles CustomerLanding
 const CustomerLanding = () => import('../views/CustomerLanding.vue');
@@ -51,6 +52,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'CustomerLanding',
     component: CustomerLanding
   },
+  {
+    path: '/super-admin',
+    name: 'SuperAdmin',
+    component: SuperAdmin,
+    meta: { requiresAuth: true }
+  },
 ]
 
 const router = createRouter({
@@ -66,6 +73,14 @@ router.beforeEach((to, from, next) => {
 
   if (isAuthRoute && !token) {
     return next({ path: '/login', replace: true, query: { redirect: to.fullPath } });
+  }
+
+  // Admin-only route guard
+  if (to.path === '/super-admin') {
+    const isAdmin = localStorage.getItem('is_admin');
+    if (!token || String(isAdmin) !== '1') {
+      return next({ path: '/login', replace: true });
+    }
   }
 
 

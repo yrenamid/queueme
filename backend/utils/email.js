@@ -21,7 +21,6 @@ function htmlToText(html) {
 }
 
 
-// Send an email via SendGrid; returns {success} or {skipped}
 async function sendEmail({ to, subject, text, html, replyTo, categories }) {
   if (!apiKey) {
     console.warn('[email] SendGrid not configured; skipping email to', to);

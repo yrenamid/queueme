@@ -275,6 +275,27 @@ async function ensureUsersPhoneColumn() {
 
 module.exports.ensureUsersPhoneColumn = ensureUsersPhoneColumn;
 
+// Add business_proof_url to businesses and is_admin to users
+async function ensureBusinessProofAndAdmin() {
+  try {
+    const rProof = await query('SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', ['businesses', 'proof_url']);
+    if (!(Number(rProof?.[0]?.cnt || 0) > 0)) {
+      await query('ALTER TABLE businesses ADD COLUMN proof_url VARCHAR(1000) NULL AFTER qr_code_img');
+      console.log('[schema] Added businesses.proof_url');
+    }
+    const rAdmin = await query('SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', ['users', 'is_admin']);
+    if (!(Number(rAdmin?.[0]?.cnt || 0) > 0)) {
+      await query('ALTER TABLE users ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0 AFTER role');
+      await query('CREATE INDEX IF NOT EXISTS idx_users_is_admin ON users (is_admin)').catch(()=>{});
+      console.log('[schema] Added users.is_admin');
+    }
+  } catch (e) {
+    console.warn('[schema] ensureBusinessProofAndAdmin failed (non-fatal):', e?.message || e);
+  }
+}
+
+module.exports.ensureBusinessProofAndAdmin = ensureBusinessProofAndAdmin;
+
 // Ensure notification toggles/templates exist 
 async function ensureNotificationSettingsColumns() {
   try {

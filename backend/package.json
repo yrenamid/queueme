@@ -6,7 +6,9 @@
     "start": "node server.js",
     "dev": "node server.js",
     "test": "jest",
-    "qr:regenerate": "node scripts/regenerate_qr.js"
+    "qr:regenerate": "node scripts/regenerate_qr.js",
+    "seed:superadmin": "node scripts/seed_super_admin.js",
+    "hash": "node scripts/bcrypt_hash.js"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
@@ -18,7 +20,8 @@
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.1",
+  "morgan": "^1.10.1",
+  "multer": "^1.4.5-lts.1",
     "mysql2": "^3.14.5",
     "nodemailer": "^7.0.6",
     "qrcode": "^1.5.4",
