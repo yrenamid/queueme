@@ -1,1 +1,17 @@
-﻿# Root ignores\r\nbackend/node_modules/\r\nclient-side/node_modules/\r\nbackend/.env\r\nbackend/.env.*\r\nclient-side/.env\r\nclient-side/dist/\r\nclient-side/.vite/\r\n*.log\r\nlogs/\r\n# Do not push local deployment notes or examples\r\nDEPLOYMENT.md\r\nbackend/.env.example\r\n
+# Root-level ignores
+*.log
+logs/
+DEPLOYMENT.md
+
+
+# Backend
+backend/node_modules/
+backend/.env
+backend/.env.*
+backend/.env.example
+
+# Frontend (client-side)
+client-side/node_modules/
+client-side/.env
+client-side/.vite/
+client-side/dist/
