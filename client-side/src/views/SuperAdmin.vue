@@ -191,8 +191,17 @@ export default {
       } catch (_) { return String(u); }
     };
 
-    const openProof = (u) => {
+    const openProof = async (u) => {
       const url = normProof(u);
+      try {
+        const resp = await fetch(url, { method: 'HEAD' });
+        if (!resp.ok) {
+          alert('Proof file is missing on the server (404).');
+          return;
+        }
+      } catch (e) {
+        // No-op
+      }
       try { window.open(url, '_blank', 'noopener,noreferrer'); }
       catch { location.href = url; }
     };
