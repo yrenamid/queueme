@@ -22,6 +22,7 @@
               <input :type="showNew ? 'text' : 'password'" v-model="password" autocomplete="new-password" class="w-full rounded text-[#222222] px-2 py-2 text-sm bg-[#f9f9f1] placeholder:text-[#6b7280] pr-10" placeholder="••••••••" />
               <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-[#283618] text-xs underline" @click="showNew = !showNew">{{ showNew ? 'Hide' : 'Show' }}</button>
             </div>
+            <div class="mt-1"><PasswordStrength :password="password" /></div>
           </div>
           <div class="flex flex-col">
             <label class="text-xs mb-1 text-white/90">Confirm Password</label>
@@ -49,10 +50,11 @@ import { IonModal, IonButton } from '@ionic/vue';
 import { ref } from 'vue';
 import { updateAdminProfile } from '@/services/api';
 import { useToast } from '@/composables/useToast';
+import PasswordStrength from '@/components/PasswordStrength.vue';
 
 export default {
   name: 'SuperAdminSettings',
-  components: { IonModal, IonButton },
+  components: { IonModal, IonButton, PasswordStrength },
   props: { isOpen: { type: Boolean, default: false } },
   setup(props, { emit }){
     const { toast } = useToast();

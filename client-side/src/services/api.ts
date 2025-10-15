@@ -425,7 +425,7 @@ export async function getAdminProfile() {
   throw new Error(data.message || 'Failed to load admin profile');
 }
 
-export async function updateAdminProfile(payload: { name?: string; password?: string }) {
+export async function updateAdminProfile(payload: { name?: string; password?: string; current_password?: string }) {
   const { data } = await api.put('/admin/profile', payload);
   if (data.success) return true;
   throw new Error(data.message || 'Failed to update admin profile');
@@ -453,6 +453,25 @@ export async function regenerateQR() {
   const { data } = await api.post('/qr/regenerate');
   if (data.success) return data.data as { url: string; image: string };
   throw new Error(data.message || 'Failed to regenerate QR');
+}
+
+// Forgot/Reset Password (businesses)
+export async function forgotPassword(email: string) {
+  const { data } = await api.post('/auth/forgot-password', { email });
+  if (data.success) return true;
+  throw new Error(data.message || 'Failed to request reset');
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  const { data } = await api.post('/auth/reset-password', { token, newPassword });
+  if (data.success) return true;
+  throw new Error(data.message || 'Failed to reset password');
+}
+
+export async function changePassword(current_password: string, new_password: string) {
+  const { data } = await api.post('/auth/change-password', { current_password, new_password });
+  if (data.success) return true;
+  throw new Error(data.message || 'Failed to change password');
 }
 
 

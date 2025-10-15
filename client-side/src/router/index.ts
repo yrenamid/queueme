@@ -7,6 +7,8 @@ import Dashboard from '../views/Dashboard.vue'
 import CustomerFoodBased from '../views/CustomerFoodBased.vue'
 import CustomerServiceBased from '../views/CustomerServiceBased.vue'
 import SuperAdmin from '../views/SuperAdmin.vue'
+const ForgotPassword = () => import('../views/ForgotPassword.vue');
+const ResetPassword = () => import('../views/ResetPassword.vue');
 
 // Handles CustomerLanding
 const CustomerLanding = () => import('../views/CustomerLanding.vue');
@@ -31,6 +33,8 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Login',
     component: Login
   },
+  { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword },
+  { path: '/reset-password', name: 'ResetPassword', component: ResetPassword },
   {
     path: '/dashboard/:slug',
     name: 'Dashboard',

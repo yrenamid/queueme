@@ -54,6 +54,7 @@
         >
           <ion-input-password-toggle slot="end"></ion-input-password-toggle>
         </ion-input>
+        <div class="mt-1"><PasswordStrength :password="String(businessPassword || '')" /></div>
   <p v-if="(touched.password || submitAttempted) && validationErrors.password" class="text-red-200 text-xs mt-1">{{ validationErrors.password }}</p>
       </div>
 
@@ -72,7 +73,7 @@
 </template>
 
 <script>
-// Registration step: collects business name, email, and password with basic validation and emits continue.
+// Registration step: collects business name, email, and password with basic validation and continue.
 import {
   IonCard,
   IonButton,
@@ -80,10 +81,11 @@ import {
   IonInput,
   
 } from "@ionic/vue";
+import PasswordStrength from '@/components/PasswordStrength.vue';
 
 export default {
   name: "BusinessForm",
-  components: { IonCard, IonButton, IonLabel, IonInput },
+  components: { IonCard, IonButton, IonLabel, IonInput, PasswordStrength },
   props: {
     businessName: String,
     businessEmail: String,

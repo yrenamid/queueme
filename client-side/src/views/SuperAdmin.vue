@@ -94,7 +94,15 @@
                   <td class="p-3 whitespace-nowrap overflow-hidden text-ellipsis" :title="row.owner_email || ''">{{ row.owner_email || '' }}</td>
                   <td class="p-3 whitespace-nowrap overflow-hidden text-ellipsis" :title="new Date(row.created_at).toLocaleString()">{{ new Date(row.created_at).toLocaleString() }}</td>
                   <td class="p-3">
-                    <a v-if="row.proof_url" :href="row.proof_url" target="_blank" class="inline-flex items-center gap-1 sa-proof-link underline underline-offset-2" title="Open proof">
+              <a v-if="row.proof_url"
+                :href="normProof(row.proof_url)"
+                :data-abs="normProof(row.proof_url)"
+                target="_blank"
+                rel="noopener noreferrer external nofollow"
+                class="inline-flex items-center gap-1 sa-proof-link underline underline-offset-2"
+                title="Open proof"
+                style="cursor:pointer"
+              >
                       <ion-icon :icon="attachOutline"></ion-icon>
                       View
                     </a>
@@ -125,7 +133,7 @@ import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonSele
 import { settingsOutline, downloadOutline, searchOutline, attachOutline } from 'ionicons/icons';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { adminListBusinesses } from '@/services/api';
+import api, { adminListBusinesses } from '@/services/api';
 import SuperAdminSettings from '@/components/SuperAdminSettings.vue';
 
 export default {
@@ -161,6 +169,34 @@ export default {
     const clearFilters = () => { search.value = ''; category.value = ''; page.value = 1; load(); };
     const prevPage = () => { if (page.value > 1) { page.value--; load(); } };
     const nextPage = () => { if (page.value * pageSize.value < total.value) { page.value++; load(); } };
+    const normProof = (u) => {
+      if (!u) return '';
+      try {
+        const s = String(u);
+        const origin = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : '';
+        const apiBase = (api && api.defaults && api.defaults.baseURL) ? String(api.defaults.baseURL) : '/api';
+        const prefix = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase; // '/api'
+        if (/^https?:\/\//i.test(s)) {
+          const url = new URL(s);
+          const p = url.pathname || '';
+          if (p.startsWith('/public/uploads') || p.startsWith('/uploads')) {
+            const path = `${prefix}${p}`;
+            return `${origin}${path}`;
+          }
+          return s;
+        }
+        const basePath = s.startsWith('/') ? s : `/${s}`;
+        const path = `${prefix}${basePath}`;
+        return `${origin}${path}`;
+      } catch (_) { return String(u); }
+    };
+
+    const openProof = (u) => {
+      const url = normProof(u);
+      try { window.open(url, '_blank', 'noopener,noreferrer'); }
+      catch { location.href = url; }
+    };
+
     const exportAll = async () => {
   const headers = ['Name','Email','Phone','Category','Owner Email','Created'];
       const items = [];
@@ -193,7 +229,7 @@ export default {
     onMounted(() => { tick(); timer = setInterval(tick, 1000); load(); });
     onBeforeUnmount(() => { if (timer) clearInterval(timer); });
 
-    return { rows, total, page, pageSize, search, category, settingsOpen, globalTotal, foodCount, serviceCount, nowText, applyFilters, clearFilters, prevPage, nextPage, exportAll, openSettings, logout, settingsOutline, downloadOutline, searchOutline, attachOutline };
+    return { rows, total, page, pageSize, search, category, settingsOpen, globalTotal, foodCount, serviceCount, nowText, applyFilters, clearFilters, prevPage, nextPage, exportAll, openSettings, logout, normProof, openProof, settingsOutline, downloadOutline, searchOutline, attachOutline };
   }
 };
 </script>

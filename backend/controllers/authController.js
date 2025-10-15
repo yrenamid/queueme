@@ -5,6 +5,8 @@ const { jwt: jwtCfg } = require('../config/configdb');
 const { generateSlug, generateBusinessQRCode, ensureUniqueSlug } = require('../utils/qrGenerator');
 
 const { normalizePhoneDigits, isPasswordStrong, hasNoInternalSpaces, isNotBlank, isValidPHPhone } = require('../utils/validators');
+const crypto = require('crypto');
+const { sendEmail } = require('../utils/email');
 
 
 
@@ -92,10 +94,8 @@ async function registerBusiness(req, res) {
   try {
     const f = req.file;
     if (f && f.filename && f.size != null) {
-      const publicBase = process.env.PUBLIC_BASE_URL || '';
       const urlPath = `/public/uploads/${encodeURIComponent(f.filename)}`;
-      const finalUrl = publicBase ? `${publicBase.replace(/\/$/, '')}${urlPath}` : urlPath;
-      await query('UPDATE businesses SET proof_url = ? WHERE id = ?', [finalUrl, business_id]);
+      await query('UPDATE businesses SET proof_url = ? WHERE id = ?', [urlPath, business_id]);
     }
   } catch (e) { console.warn('[registerBusiness] proof save skipped:', e?.message || e); }
 
@@ -185,3 +185,81 @@ async function logout(req, res) {
 }
 
 module.exports = { registerBusiness, login, logout };
+
+// Forgot/Reset Password for businesses
+async function forgotPassword(req, res) {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+  try {
+    const rows = await query('SELECT id, email, name FROM businesses WHERE email = ? LIMIT 1', [email]);
+    if (!rows.length) return res.status(200).json({ success: true, message: 'If that email exists, a reset link has been sent' });
+    const biz = rows[0];
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await query('UPDATE businesses SET reset_token=?, reset_expires=? WHERE id=?', [token, expires, biz.id]);
+    const front = (process.env.FRONTEND_URL || process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    const resetUrl = `${front || ''}/reset-password?token=${encodeURIComponent(token)}`;
+    try {
+      await sendEmail({
+        to: biz.email,
+        subject: 'QueueMe Password Reset',
+        html: `<p>Hello ${biz.name || ''},</p><p>Use the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can ignore this email.</p>`
+      });
+    } catch (e) {
+      console.warn('[forgotPassword] email send failed, but token stored:', e?.message || e);
+    }
+    return res.json({ success: true, message: 'If that email exists, a reset link has been sent' });
+  } catch (e) {
+    console.error('[forgotPassword]', e);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function resetPassword(req, res) {
+  const { token, newPassword } = req.body || {};
+  if (!token || !newPassword) return res.status(400).json({ success: false, message: 'Missing token or password' });
+  if (!isPasswordStrong(newPassword)) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters with at least one letter and one number' });
+  try {
+    const rows = await query('SELECT id FROM businesses WHERE reset_token = ? AND reset_expires IS NOT NULL AND reset_expires > NOW() LIMIT 1', [token]);
+    if (!rows.length) return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+    const id = rows[0].id;
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await query('UPDATE businesses SET password=?, reset_token=NULL, reset_expires=NULL WHERE id=?', [hashed, id]);
+    return res.json({ success: true, message: 'Password has been reset' });
+  } catch (e) {
+    console.error('[resetPassword]', e);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+module.exports.forgotPassword = forgotPassword;
+module.exports.resetPassword = resetPassword;
+
+// Change password for authenticated users
+async function changePassword(req, res) {
+  const { current_password, new_password } = req.body || {};
+  if (!current_password || !new_password) return res.status(400).json({ success: false, message: 'Current and new password are required' });
+  if (!isPasswordStrong(new_password)) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters with at least one letter and one number' });
+  try {
+    const userRows = await query('SELECT id, password FROM users WHERE id = ? AND business_id = ? LIMIT 1', [req.user.id, req.user.business_id]);
+    if (userRows.length) {
+      const ok = await bcrypt.compare(String(current_password), String(userRows[0].password || ''));
+      if (!ok) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+      const hashed = await bcrypt.hash(String(new_password), 10);
+      await query('UPDATE users SET password=? WHERE id=?', [hashed, req.user.id]);
+      return res.json({ success: true, message: 'Password updated' });
+    }
+    const bizRows = await query('SELECT id, password FROM businesses WHERE id = ? LIMIT 1', [req.user.business_id]);
+    if (!bizRows.length) return res.status(404).json({ success: false, message: 'Account not found' });
+    const ok = await bcrypt.compare(String(current_password), String(bizRows[0].password || ''));
+    if (!ok) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    const hashed = await bcrypt.hash(String(new_password), 10);
+    await query('UPDATE businesses SET password=? WHERE id=?', [hashed, req.user.business_id]);
+    return res.json({ success: true, message: 'Password updated' });
+  } catch (e) {
+    console.error('[changePassword]', e);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+module.exports.changePassword = changePassword;

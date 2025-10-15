@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const { getPool } = require('./database/connection');
 const http = require('http');
 const realtime = require('./utils/realtime');
-const { ensureSettingsColumns, ensureQueueReadyColumns, ensureQueueWaitingColumn, ensureQueuePartySizeColumn, ensureQueueStatusEnum, ensureMenuColumns, ensureServicesColumns, ensureNotificationSettingsColumns, ensureFeedbackTable, ensureUsersPhoneColumn, ensureQueueInitialEWTColumn, ensureBusinessProofAndAdmin } = require('./database/ensureSchema');
+const { ensureSettingsColumns, ensureQueueReadyColumns, ensureQueueWaitingColumn, ensureQueuePartySizeColumn, ensureQueueStatusEnum, ensureMenuColumns, ensureServicesColumns, ensureNotificationSettingsColumns, ensureFeedbackTable, ensureUsersPhoneColumn, ensureQueueInitialEWTColumn, ensureBusinessProofAndAdmin, ensureBusinessResetColumns } = require('./database/ensureSchema');
 const path = require('path');
 const fs = require('fs');
 const app = express();
@@ -50,17 +50,20 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(bodyParser.json({ limit: '1mb' })); 
 app.use(morgan('dev'));
 
-// static assets from backend/public 
-app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// built frontend first if available
+app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/api/public', express.static(path.join(__dirname, 'public')));
+app.use('/api/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+
+
 const clientDist = path.join(__dirname, '..', 'client-side', 'dist');
 const hasClientBuild = fs.existsSync(clientDist) && fs.existsSync(path.join(clientDist, 'index.html'));
 console.log(`[startup] client build present: ${hasClientBuild} at ${clientDist}`);
 if (hasClientBuild) {
 	app.use(express.static(clientDist));
 }
-// static assets from backend/public
+
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 app.use('/api/business', require('./routes/businessRoutes'));
@@ -141,6 +144,7 @@ async function runEnsuresSafe() {
 		['ensureFeedbackTable', ensureFeedbackTable],
 		['ensureQueueInitialEWTColumn', ensureQueueInitialEWTColumn],
 		['ensureBusinessProofAndAdmin', ensureBusinessProofAndAdmin],
+		['ensureBusinessResetColumns', ensureBusinessResetColumns],
 	];
 	for (const [name, fn] of tasks) {
 		try {

@@ -296,6 +296,26 @@ async function ensureBusinessProofAndAdmin() {
 
 module.exports.ensureBusinessProofAndAdmin = ensureBusinessProofAndAdmin;
 
+// Ensure password reset columns exist on businesses
+async function ensureBusinessResetColumns() {
+  try {
+    const rowsTok = await query('SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', ['businesses', 'reset_token']);
+    if (!(Number(rowsTok?.[0]?.cnt || 0) > 0)) {
+      await query('ALTER TABLE businesses ADD COLUMN reset_token VARCHAR(255) NULL AFTER password');
+      console.log('[schema] Added businesses.reset_token');
+    }
+    const rowsExp = await query('SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', ['businesses', 'reset_expires']);
+    if (!(Number(rowsExp?.[0]?.cnt || 0) > 0)) {
+      await query('ALTER TABLE businesses ADD COLUMN reset_expires DATETIME NULL AFTER reset_token');
+      console.log('[schema] Added businesses.reset_expires');
+    }
+  } catch (e) {
+    console.warn('[schema] ensureBusinessResetColumns failed (non-fatal):', e?.message || e);
+  }
+}
+
+module.exports.ensureBusinessResetColumns = ensureBusinessResetColumns;
+
 // Ensure notification toggles/templates exist 
 async function ensureNotificationSettingsColumns() {
   try {

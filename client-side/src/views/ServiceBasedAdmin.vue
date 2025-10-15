@@ -63,6 +63,14 @@
                       />
                       Staff/Queue Settings
                     </ion-button>
+                    <ion-button v-if="role==='owner' || role==='manager'"
+                      @click="changePasswordOpen = true"
+                      fill="clear"
+                      class="normal-case w-full py-1"
+                    >
+                      <font-awesome-icon :icon="['fas','key']" class="me-3" />
+                      Change Password
+                    </ion-button>
                   </div>
                   <ion-button
                     @click="logout"
@@ -227,6 +235,12 @@
         @close="showSettings = false"
       />
 
+      <BusinessChangePassword
+        v-if="changePasswordOpen"
+        :is-open="changePasswordOpen"
+        @close="changePasswordOpen = false"
+      />
+
       <QRModal
         v-if="showQRCode"
         :is-open="showQRCode"
@@ -266,6 +280,7 @@ import QRModal from "../components/QRModal.vue";
 import Notifications from "../components/AdminNotification.vue";
 import Settings from "../components/AdminSettings.vue";
 import RecentActivity from "../components/RecentActivity.vue";
+import BusinessChangePassword from '@/components/BusinessChangePassword.vue';
 import { ref, watch } from "vue";
 import { connectRealtime, onRealtime } from "@/composables/useRealtime";
  
@@ -289,7 +304,8 @@ export default {
     IonPopover,
     QRModal,
     Notifications,
-    Settings,
+  Settings,
+  BusinessChangePassword,
   Analytics,
   RecentActivity,
     
@@ -337,7 +353,8 @@ export default {
     watch(activeTab, (tab) => {
   try { localStorage.setItem('adminActiveTab', tab); } catch (e) { console.debug('[service-admin] could not persist adminActiveTab', e); }
     });
-    const showCallModal = ref(false);
+  const showCallModal = ref(false);
+  const changePasswordOpen = ref(false);
     const webhookBlink = ref(false);
   try { connectRealtime(); } catch (err) { console.debug('[service-admin] realtime connect failed', err); }
     try {
@@ -369,7 +386,8 @@ export default {
       
       qrCodeDataUrl,
       showNotifications,
-      showSettings,
+  showSettings,
+  changePasswordOpen,
       notifications,
       settings,
       handleShowQrCode,

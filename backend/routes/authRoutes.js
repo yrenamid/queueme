@@ -2,7 +2,8 @@
 // register business, login, logout
 const express = require('express');
 const router = express.Router();
-const { registerBusiness, login, logout } = require('../controllers/authController');
+const auth = require('../middleware/authMiddleware');
+const { registerBusiness, login, logout, forgotPassword, resetPassword, changePassword } = require('../controllers/authController');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -25,7 +26,7 @@ const fileFilter = (req, file, cb) => {
 };
 const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 
-// single file field: proof
+
 router.post('/register', upload.single('proof'), (err, req, res, next) => {
 	if (err) {
 		const msg = err.message || 'Upload error';
@@ -35,5 +36,8 @@ router.post('/register', upload.single('proof'), (err, req, res, next) => {
 }, registerBusiness);
 router.post('/login', login);
 router.post('/logout', logout);
+router.post('/change-password', auth, changePassword);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

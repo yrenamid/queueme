@@ -48,6 +48,9 @@
                   style="--highlight-color: none; caret-color: #000000e3"
                 ></ion-input>
               </div>
+              <div class="mt-2 text-right">
+                <ion-button @click="goForgot" fill="clear" class="normal-case text-white text-sm underline">Forgot Password?</ion-button>
+              </div>
               <ion-button
                 type="submit"
                 id="poppins"
@@ -110,6 +113,7 @@ export default {
   },
   methods: {
     goHome() { this.router.push('/home'); },
+  goForgot() { this.router.push('/forgot-password'); },
     async handleLogin() {
       if (!this.email || !this.password) {
         const alert = await alertController.create({ header: 'Missing Credentials', message: 'Please enter both email and password.', buttons: ['OK']});
@@ -129,7 +133,7 @@ export default {
         if (resp.user?.slug) {
           localStorage.setItem('businessSlug', String(resp.user.slug));
         }
-        // If super admin, go to Super Admin dashboard regardless of slug
+        
         const isAdmin = String(resp?.user?.is_admin || localStorage.getItem('is_admin') || '0') === '1';
         let target = '/home';
         if (isAdmin) {

@@ -113,7 +113,30 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
         throw e;
       }
     }
-    return res.json({ success: true, data: { total, page: p, pageSize: ps, rows, global } });
+
+    
+  const reqBase = `${req.protocol}://${req.get('host') || ''}`;
+  const envBase = process.env.PUBLIC_BASE_URL || '';
+  const base = (reqBase || envBase).replace(/\/$/, '');
+    const norm = (u) => {
+      if (!u) return u;
+      const s = String(u);
+      if (/^https?:\/\//i.test(s)) {
+        try {
+          const url = new URL(s);
+          const p = url.pathname || '';
+          if (p.startsWith('/public/uploads') || p.startsWith('/uploads')) {
+            return `${base}${p}`;
+          }
+          return s;
+        } catch { return s; }
+      }
+      const path = s.startsWith('/') ? s : `/${s}`;
+      return `${base}${path}`;
+    };
+  const outRows = Array.isArray(rows) ? rows.map(r => ({ ...r, proof_url: norm(r.proof_url) })) : rows;
+
+    return res.json({ success: true, data: { total, page: p, pageSize: ps, rows: outRows, global } });
   } catch (err) {
     console.error('[admin businesses]', err);
     return res.status(500).json({ success: false, message: 'Server error' });

@@ -63,6 +63,14 @@
                       />
                       Staff/Queue Settings
                     </ion-button>
+                    <ion-button v-if="role==='owner' || role==='manager'"
+                      @click="changePasswordOpen = true"
+                      fill="clear"
+                      class="normal-case w-full py-1"
+                    >
+                      <font-awesome-icon :icon="['fas','key']" class="me-3" />
+                      Change Password
+                    </ion-button>
                   </div>
                   <ion-button
                     @click="logout"
@@ -227,6 +235,12 @@
         @close="showSettings = false"
       />
 
+      <BusinessChangePassword
+        v-if="changePasswordOpen"
+        :is-open="changePasswordOpen"
+        @close="changePasswordOpen = false"
+      />
+
       <QRModal
         v-if="showQRCode"
         :is-open="showQRCode"
@@ -273,6 +287,7 @@ import CallCustomersModal from "@/components/CallCustomersModal.vue";
 import { ref, watch, computed } from "vue";
 import { useAdminDashboard } from "@/composables/useAdminDashboard";
 import { connectRealtime, onRealtime } from "@/composables/useRealtime";
+import BusinessChangePassword from '@/components/BusinessChangePassword.vue';
 
 export default {
 
@@ -293,7 +308,8 @@ export default {
     IonPopover,
     QRModal,
     Notifications,
-    Settings,
+  Settings,
+  BusinessChangePassword,
   Analytics,
   RecentActivity,
     
@@ -314,8 +330,8 @@ export default {
       showQRCode,
       
       qrCodeDataUrl,
-      showNotifications,
-      showSettings,
+    showNotifications,
+    showSettings,
       notifications,
 
       settings,
@@ -329,7 +345,8 @@ export default {
       logout,
       settingsSummary,
       loadSettingsSummary
-    } = useAdminDashboard();
+  } = useAdminDashboard();
+  const changePasswordOpen = ref(false);
   const overviewSummary = ref({ totalCustomers: 0, avgWait: 0, completedToday: 0, cancelledToday: 0 })
 
   function onOverviewSummary(s) { overviewSummary.value = s || overviewSummary.value }
@@ -395,15 +412,16 @@ export default {
       qrCodeDataUrl,
       showNotifications,
       showSettings,
-      notifications,
+  notifications,
       settings,
       handleShowQrCode,
       
   queueSummary,
   overviewMetrics,
       logout,
-      settingsSummary,
+  settingsSummary,
       loadSettingsSummary,
+  changePasswordOpen,
       showCallModal,
       onCalled,
       overviewSummary,
