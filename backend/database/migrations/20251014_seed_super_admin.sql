@@ -3,9 +3,9 @@ INSERT INTO users (business_id, name, email, phone, password, role, is_admin)
 VALUES (
   (SELECT id FROM businesses ORDER BY id ASC LIMIT 1),
   'Super Admin',
-  'admin@example.com',
+  'queueme123@gmail.com',
   NULL,
-  '$2b$10$REPLACE_WITH_BCRYPT_HASH',
+  '$2b$10$OcKLwfxiCkQsJjnlgWaqB.hsu2oOhOCG8aaw0byrUGVzrcpS0lYvS',
   'manager',
   1
 )

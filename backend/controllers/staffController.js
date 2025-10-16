@@ -13,10 +13,10 @@ async function listStaff(req, res) {
 
     const lim = Number.isFinite(pageSize) ? Math.max(1, Math.min(100, Number(pageSize))) : 10;
     const off = Number.isFinite(offset) ? Math.max(0, Number(offset)) : 0;
-    const sql = `SELECT id,name,email,role,created_at FROM users WHERE business_id=? ORDER BY (role='owner') DESC, created_at DESC LIMIT ${lim} OFFSET ${off}`;
+    const sql = `SELECT id,name,email,role,created_at FROM users WHERE business_id=? AND is_admin=0 ORDER BY (role='owner') DESC, created_at DESC LIMIT ${lim} OFFSET ${off}`;
     const [rows, totalRows] = await Promise.all([
       query(sql, [req.user.business_id]),
-      query('SELECT COUNT(*) as cnt FROM users WHERE business_id=?', [req.user.business_id])
+      query('SELECT COUNT(*) as cnt FROM users WHERE business_id=? AND is_admin=0', [req.user.business_id])
     ]);
     res.json({ success:true, data: rows, pagination: { page, pageSize, total: totalRows[0].cnt, totalPages: Math.ceil(totalRows[0].cnt / pageSize) } });
   }
@@ -83,6 +83,10 @@ async function updateStaff(req, res) {
       const e2 = await query('SELECT id FROM businesses WHERE email=?', [email]);
       if (e1.length || e2.length) return res.status(409).json({ success:false, message:'Email already in use' });
     }
+    
+    const target = await query('SELECT is_admin FROM users WHERE id=? AND business_id=?', [id, req.user.business_id]);
+    if (!target.length) return res.status(404).json({ success:false, message:'Not found' });
+    if (Number(target[0].is_admin) === 1) return res.status(403).json({ success:false, message:'Cannot edit admin user' });
     if (password) {
       const hashed = await bcrypt.hash(password, 10);
       const normalizedRole = role && ['owner','manager','cashier'].includes(role) ? role : undefined;
@@ -102,9 +106,10 @@ async function deleteStaff(req, res) {
   const { id } = req.params;
   try {
 
-    const rows = await query('SELECT role FROM users WHERE id=? AND business_id=?', [id, req.user.business_id]);
+  const rows = await query('SELECT role, is_admin FROM users WHERE id=? AND business_id=?', [id, req.user.business_id]);
     if (!rows.length) return res.status(404).json({ success:false, message:'Not found' });
     if (rows[0].role === 'owner') return res.status(403).json({ success:false, message:'Cannot delete owner'});
+  if (Number(rows[0].is_admin) === 1) return res.status(403).json({ success:false, message:'Cannot delete admin user'});
     await query('DELETE FROM users WHERE id=? AND business_id=?', [id, req.user.business_id]);
     res.json({ success:true, message:'Deleted'});
   }

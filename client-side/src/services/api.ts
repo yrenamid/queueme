@@ -432,7 +432,6 @@ export async function updateAdminProfile(payload: { name?: string; password?: st
 }
 
 
-
 export async function getOverviewMetrics() {
   const { data } = await api.get('/analytics/overview', { params: { _t: Date.now() } });
   if (data.success) return data.data as { totalCustomers: number; avgWait: number; completedToday: number; cancelledToday: number };
@@ -467,6 +466,7 @@ export async function resetPassword(token: string, newPassword: string) {
   if (data.success) return true;
   throw new Error(data.message || 'Failed to reset password');
 }
+
 
 export async function changePassword(current_password: string, new_password: string) {
   const { data } = await api.post('/auth/change-password', { current_password, new_password });

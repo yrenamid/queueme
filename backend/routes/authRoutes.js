@@ -8,7 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// ensure uploads dir exists
+
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 try { fs.mkdirSync(uploadDir, { recursive: true }); } catch {}
 
@@ -39,5 +39,6 @@ router.post('/logout', logout);
 router.post('/change-password', auth, changePassword);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+
 
 module.exports = router;

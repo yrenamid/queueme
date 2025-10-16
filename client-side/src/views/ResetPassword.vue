@@ -72,7 +72,7 @@ export default {
       try { await resetPassword(token.value, pwd.value); done.value = true; } catch (e) { errorMsg.value = e.message || 'Failed to reset password'; } finally { loading.value = false; }
     };
     const goLogin = () => { location.href = '/login'; };
-    return { pwd, confirm, token, done, errorMsg, loading, showNew, showConfirm, submit, goLogin };
+  return { pwd, confirm, token, done, errorMsg, loading, showNew, showConfirm, submit, goLogin };
   }
 }
 </script>

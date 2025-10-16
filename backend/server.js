@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const { getPool } = require('./database/connection');
 const http = require('http');
 const realtime = require('./utils/realtime');
-const { ensureSettingsColumns, ensureQueueReadyColumns, ensureQueueWaitingColumn, ensureQueuePartySizeColumn, ensureQueueStatusEnum, ensureMenuColumns, ensureServicesColumns, ensureNotificationSettingsColumns, ensureFeedbackTable, ensureUsersPhoneColumn, ensureQueueInitialEWTColumn, ensureBusinessProofAndAdmin, ensureBusinessResetColumns } = require('./database/ensureSchema');
+const { ensureSettingsColumns, ensureQueueReadyColumns, ensureQueueWaitingColumn, ensureQueuePartySizeColumn, ensureQueueStatusEnum, ensureMenuColumns, ensureServicesColumns, ensureNotificationSettingsColumns, ensureFeedbackTable, ensureUsersPhoneColumn, ensureQueueInitialEWTColumn, ensureBusinessProofAndAdmin, ensureBusinessResetColumns, ensureUsersResetColumns } = require('./database/ensureSchema');
 const path = require('path');
 const fs = require('fs');
 const app = express();
@@ -145,6 +145,7 @@ async function runEnsuresSafe() {
 		['ensureQueueInitialEWTColumn', ensureQueueInitialEWTColumn],
 		['ensureBusinessProofAndAdmin', ensureBusinessProofAndAdmin],
 		['ensureBusinessResetColumns', ensureBusinessResetColumns],
+		['ensureUsersResetColumns', ensureUsersResetColumns],
 	];
 	for (const [name, fn] of tasks) {
 		try {

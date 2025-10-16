@@ -28,11 +28,12 @@
               ></ion-input>
             </div>
 
+
             <div v-if="errorMsg" class="text-sm border border-red-500/40 bg-red-900/30 text-red-200 rounded px-3 py-2">
               ❌ {{ errorMsg }}
             </div>
             <div v-if="sent" class="text-sm border border-green-600/40 bg-green-900/30 text-green-200 rounded px-3 py-2">
-              ✅ A password reset link has been sent to your email address. Please check your inbox.
+              ✅ If an account exists for that email, you’ll receive a password reset link. Please check your inbox and spam.
             </div>
 
             <div class="flex flex-col sm:flex-row gap-2 pt-1">
@@ -64,7 +65,7 @@ export default {
   components: { IonPage, IonHeader, IonToolbar, IonContent, IonInput, IonButton },
   setup(){
     const email = ref('');
-    const sent = ref(false);
+  const sent = ref(false);
     const errorMsg = ref('');
     const loading = ref(false);
     const router = useRouter();
@@ -80,10 +81,9 @@ export default {
       }
       loading.value = true;
       try {
-        await forgotPassword(email.value.trim());
+  await forgotPassword(email.value.trim());
         sent.value = true;
       } catch (e) {
-        // We keep the same message for privacy, but still show friendly error
         errorMsg.value = "We couldn’t find an account with that email. Please try again.";
       } finally {
         loading.value = false;
@@ -92,7 +92,7 @@ export default {
 
     const goLogin = () => router.push('/login');
 
-    return { email, sent, errorMsg, loading, submit, goLogin };
+  return { email, sent, errorMsg, loading, submit, goLogin };
   }
 }
 </script>
@@ -101,7 +101,6 @@ export default {
 ion-header, ion-toolbar { --background:#283618 !important; box-shadow:none; }
 ion-content { --background:#283618 !important; }
 
-/* Input styling: dark text on light background, with focus states */
 .queueme-input {
   --background: #f9f9f1;
   --color: #222222;

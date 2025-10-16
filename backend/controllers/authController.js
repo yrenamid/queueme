@@ -186,31 +186,53 @@ async function logout(req, res) {
 
 module.exports = { registerBusiness, login, logout };
 
-// Forgot/Reset Password for businesses
+// Unified Forgot/Reset Password for users and businesses
 async function forgotPassword(req, res) {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
   try {
-    const rows = await query('SELECT id, email, name FROM businesses WHERE email = ? LIMIT 1', [email]);
-    if (!rows.length) return res.status(200).json({ success: true, message: 'If that email exists, a reset link has been sent' });
-    const biz = rows[0];
+    const front = (process.env.FRONTEND_URL || process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    await query('UPDATE businesses SET reset_token=?, reset_expires=? WHERE id=?', [token, expires, biz.id]);
-    const front = (process.env.FRONTEND_URL || process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
-    const resetUrl = `${front || ''}/reset-password?token=${encodeURIComponent(token)}`;
-    try {
-      await sendEmail({
-        to: biz.email,
-        subject: 'QueueMe Password Reset',
-        html: `<p>Hello ${biz.name || ''},</p><p>Use the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can ignore this email.</p>`
-      });
-    } catch (e) {
-      console.warn('[forgotPassword] email send failed, but token stored:', e?.message || e);
+
+    //users
+    const urows = await query('SELECT id, email, name FROM users WHERE email = ? LIMIT 1', [email]);
+    if (urows && urows.length) {
+      const user = urows[0];
+      try { await query('UPDATE users SET reset_token=?, reset_expires=? WHERE id=?', [token, expires, user.id]); } catch {}
+      const resetUrl = `${front || ''}/reset-password?token=${encodeURIComponent(token)}`;
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: 'QueueMe Password Reset',
+          html: `<p>Hello ${user.name || ''},</p><p>Use the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p>`
+        });
+      } catch (e) {
+        console.warn('[forgotPassword][users] email send failed, token stored:', e?.message || e);
+      }
+      return res.json({ success: true, message: 'If that email exists, a reset link has been sent' });
     }
+
+    //businesses
+    const brows = await query('SELECT id, email, name FROM businesses WHERE email = ? LIMIT 1', [email]);
+    if (brows && brows.length) {
+      const biz = brows[0];
+      try { await query('UPDATE businesses SET reset_token=?, reset_expires=? WHERE id=?', [token, expires, biz.id]); } catch {}
+      const resetUrl = `${front || ''}/reset-password?token=${encodeURIComponent(token)}`;
+      try {
+        await sendEmail({
+          to: biz.email,
+          subject: 'QueueMe Password Reset',
+          html: `<p>Hello ${biz.name || ''},</p><p>Use the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p>`
+        });
+      } catch (e) {
+        console.warn('[forgotPassword][businesses] email send failed, token stored:', e?.message || e);
+      }
+    }
+    // Always return success to avoid enumeration
     return res.json({ success: true, message: 'If that email exists, a reset link has been sent' });
   } catch (e) {
-    console.error('[forgotPassword]', e);
+    console.error('[forgotPassword][unified]', e);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 }
@@ -220,14 +242,25 @@ async function resetPassword(req, res) {
   if (!token || !newPassword) return res.status(400).json({ success: false, message: 'Missing token or password' });
   if (!isPasswordStrong(newPassword)) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters with at least one letter and one number' });
   try {
-    const rows = await query('SELECT id FROM businesses WHERE reset_token = ? AND reset_expires IS NOT NULL AND reset_expires > NOW() LIMIT 1', [token]);
-    if (!rows.length) return res.status(400).json({ success: false, message: 'Invalid or expired token' });
-    const id = rows[0].id;
-    const hashed = await bcrypt.hash(newPassword, 10);
-    await query('UPDATE businesses SET password=?, reset_token=NULL, reset_expires=NULL WHERE id=?', [hashed, id]);
-    return res.json({ success: true, message: 'Password has been reset' });
+    // users
+    let rows = await query('SELECT id FROM users WHERE reset_token = ? AND reset_expires IS NOT NULL AND reset_expires > NOW() LIMIT 1', [token]);
+    if (rows && rows.length) {
+      const id = rows[0].id;
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await query('UPDATE users SET password=?, reset_token=NULL, reset_expires=NULL WHERE id=?', [hashed, id]);
+      return res.json({ success: true, message: 'Password has been reset' });
+    }
+    // businesses
+    rows = await query('SELECT id FROM businesses WHERE reset_token = ? AND reset_expires IS NOT NULL AND reset_expires > NOW() LIMIT 1', [token]);
+    if (rows && rows.length) {
+      const id = rows[0].id;
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await query('UPDATE businesses SET password=?, reset_token=NULL, reset_expires=NULL WHERE id=?', [hashed, id]);
+      return res.json({ success: true, message: 'Password has been reset' });
+    }
+    return res.status(400).json({ success: false, message: 'Invalid or expired token' });
   } catch (e) {
-    console.error('[resetPassword]', e);
+    console.error('[resetPassword][unified]', e);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 }
