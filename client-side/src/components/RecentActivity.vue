@@ -36,7 +36,10 @@ export default {
   const STORAGE_KEY = `recentActivity:${businessId || 'anon'}`;
   const CLEARED_AT_KEY = `${STORAGE_KEY}:clearedAt`;
     const MAX_ITEMS = 10;
-    let offJoin, offStatus; let tick;
+  let offJoin, offStatus; let tick;
+  const recentKeys = new Map(); 
+  const DEDUP_MS = 5000;
+  const seenPaid = new Set();
 
 
 
@@ -56,9 +59,21 @@ export default {
 
 
     function push(text, payload) {
-
       if (businessId && payload && String(payload.business_id) !== String(businessId)) return;
-      items.value.unshift({ text, time: Date.now(), ...payload });
+      const qn = payload?.queue_number != null ? Number(payload.queue_number) : undefined;
+      const id = payload?.id != null ? Number(payload.id) : undefined;
+      const key = `${String(qn||'')}-${String(id||'')}-${text}`;
+  const now = Date.now();
+  const windowMs = (text === 'Payment Confirmed') ? 30000 : DEDUP_MS;
+  const last = recentKeys.get(key) || 0;
+  if (now - last < windowMs) return; 
+      recentKeys.set(key, now);
+      const newItem = { text, time: now, ...payload };
+      if (text === 'Payment Confirmed') {
+        const foundCompleted = items.value.find(it => (it.queue_number === newItem.queue_number) && it.text === 'Completed' && Math.abs(Number(it.time) - now) <= 3000);
+        if (foundCompleted) return;
+      }
+      items.value.unshift(newItem);
       if (items.value.length > MAX_ITEMS) items.value = items.value.slice(0, MAX_ITEMS);
       persist();
     }
@@ -129,28 +144,37 @@ export default {
           const filteredBackend = backendItems.filter(it => !clearedAt || Number(it.time) >= clearedAt);
           const merged = [...filteredBackend, ...items.value];
 
-          const seen = new Set();
-          const unique = [];
+          const byKey = new Map();
           for (const it of merged) {
-            const key = `${it.id}|${it.text}|${it.time}`;
-            if (!seen.has(key)) { seen.add(key); unique.push(it); }
+            const qn = it.queue_number != null ? Number(it.queue_number) : undefined;
+            const key = `${String(qn||'')}-${String(it.id||'')}-${it.text}`;
+            const prev = byKey.get(key);
+            if (!prev || Number(it.time) > Number(prev.time)) byKey.set(key, it);
           }
-          items.value = unique.sort((a,b)=>b.time - a.time).slice(0, MAX_ITEMS);
+          items.value = Array.from(byKey.values()).sort((a,b)=>b.time - a.time).slice(0, MAX_ITEMS);
           persist();
         }
   } catch (err) { console.debug('[recent-activity] failed to fetch history from backend', err); }
       connectRealtime();
-      offJoin = onRealtime('queue:joined', (d) => push('Added', d));
+  offJoin = onRealtime('queue:joined', (d) => push('Added', d));
       offStatus = onRealtime('queue:status', (d) => {
         const s = String(d?.status || '').toLowerCase();
-  if (s === 'served') push('Completed', d);
+    if (s === 'served') push('Completed', d);
         else if (s === 'cancelled') push('Cancelled', d);
         else if (s === 'called') push('Called', d);
+    else if (s === 'pending_payment') push('Pending Payment', d);
 
-  const ps = String(d?.payment_status || '').toLowerCase();
-  if (ps === 'paid' && s !== 'served') push('Payment Confirmed', d);
-      })
-      onRealtime('payment:webhook', (d) => push('Payment Confirmed', d));
+    const ps = String(d?.payment_status || '').toLowerCase();
+    if (ps === 'paid' && s !== 'served') {
+      const qid = d?.id != null ? Number(d.id) : null;
+      if (qid != null && seenPaid.has(qid)) {
+        // already logged for this queue id in this session
+      } else {
+        if (qid != null) seenPaid.add(qid);
+        push('Payment Confirmed', d);
+      }
+    }
+  });
       tick = setInterval(()=> items.value = [...items.value], 1000);
     });
     onBeforeUnmount(() => { if (offJoin) offJoin(); if (offStatus) offStatus(); if (tick) clearInterval(tick); });

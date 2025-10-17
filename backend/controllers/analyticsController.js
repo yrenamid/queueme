@@ -87,21 +87,27 @@ async function getRecentActivity(req, res) {
       )
       UNION ALL
       (
-        SELECT id, queue_number, customer_name, 'Payment Confirmed' AS action, updated_at AS ts
+        SELECT id, queue_number, customer_name, 'Payment Confirmed' AS action, COALESCE(payment_confirmed_at, updated_at) AS ts
         FROM queues
-        WHERE business_id = ? AND payment_status = 'paid' AND status <> 'served' AND updated_at IS NOT NULL
+        WHERE business_id = ? AND payment_status = 'paid' AND COALESCE(payment_confirmed_at, updated_at) IS NOT NULL
+      )
+      UNION ALL
+      (
+        SELECT id, queue_number, customer_name, 'Pending Payment' AS action, COALESCE(pending_payment_at, updated_at) AS ts
+        FROM queues
+        WHERE business_id = ? AND status = 'pending_payment' AND COALESCE(pending_payment_at, updated_at) IS NOT NULL
       )
       UNION ALL
       (
         SELECT id, queue_number, customer_name, 'Completed' AS action, served_at AS ts
         FROM queues
-        WHERE business_id = ? AND status = 'served' AND served_at IS NOT NULL
+        WHERE business_id = ? AND served_at IS NOT NULL
       )
       UNION ALL
       (
         SELECT id, queue_number, customer_name, 'Called' AS action, called_at AS ts
         FROM queues
-        WHERE business_id = ? AND status = 'called' AND called_at IS NOT NULL
+        WHERE business_id = ? AND called_at IS NOT NULL
       )
       UNION ALL
       (
@@ -111,7 +117,7 @@ async function getRecentActivity(req, res) {
       )
       ORDER BY ts DESC
       LIMIT 10`;
-    const rows = await query(sql, [businessId, businessId, businessId, businessId, businessId]);
+  const rows = await query(sql, [businessId, businessId, businessId, businessId, businessId, businessId]);
     const items = (rows || []).filter(r => r.ts).map(r => ({
       id: Number(r.id),
       queue_number: r.queue_number,

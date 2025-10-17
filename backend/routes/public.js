@@ -503,9 +503,9 @@ router.get('/pay/success', async (req, res) => {
       const [r] = await query('SELECT status FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
       const st = r ? String(r.status).toLowerCase() : '';
       if (st === 'pending_payment') {
-        await query('UPDATE queues SET payment_status="paid", status="served", served_at=NOW(), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
+        await query('UPDATE queues SET payment_status="paid", payment_confirmed_at=NOW(), status="served", served_at=NOW(), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
       } else {
-        await query('UPDATE queues SET payment_status="paid", updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
+        await query('UPDATE queues SET payment_status="paid", payment_confirmed_at=NOW(), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
       }
     } else {
       await query('UPDATE queues SET payment_status="paid", status="waiting", updated_at=NOW(), waiting_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
@@ -514,11 +514,12 @@ router.get('/pay/success', async (req, res) => {
       const { broadcast } = require('../utils/realtime');
 
       if (isService) {
-        const [r2] = await query('SELECT status FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
+        const [r2] = await query('SELECT status, queue_number FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
         const st2 = r2 ? String(r2.status).toLowerCase() : '';
-        broadcast('queue:status', { id: Number(targetId), business_id: businessId, status: (st2 === 'served' ? 'served' : undefined), payment_status: 'paid' });
+        broadcast('queue:status', { id: Number(targetId), business_id: businessId, queue_number: Number(r2?.queue_number)||undefined, status: (st2 === 'served' ? 'served' : undefined), payment_status: 'paid' });
       } else {
-        broadcast('queue:status', { id: Number(targetId), business_id: businessId, status: 'waiting', payment_status: 'paid' });
+        const [r2] = await query('SELECT queue_number FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
+        broadcast('queue:status', { id: Number(targetId), business_id: businessId, queue_number: Number(r2?.queue_number)||undefined, status: 'waiting', payment_status: 'paid' });
       }
     } catch(_) {  }
 
@@ -595,12 +596,12 @@ router.post('/pay/webhook', express.json({ type: 'application/json' }), async (r
         const [r] = await query('SELECT status FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
         const st = r ? String(r.status).toLowerCase() : '';
         if (st === 'pending_payment') {
-          await query('UPDATE queues SET payment_status="paid", status="served", served_at=NOW(), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
+          await query('UPDATE queues SET payment_status="paid", payment_confirmed_at=NOW(), status="served", served_at=NOW(), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
         } else {
-          await query('UPDATE queues SET payment_status="paid", updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
+          await query('UPDATE queues SET payment_status="paid", payment_confirmed_at=NOW(), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
         }
       } else {
-        await query('UPDATE queues SET payment_status="paid", status=IF(status IN ("pending"), "waiting", status), waiting_at = IF(status IN ("pending"), NOW(), waiting_at), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
+        await query('UPDATE queues SET payment_status="paid", payment_confirmed_at=NOW(), status=IF(status IN ("pending"), "waiting", status), waiting_at = IF(status IN ("pending"), NOW(), waiting_at), updated_at=NOW() WHERE id=? AND business_id=?', [targetId, businessId]);
       }
     } catch (e) {
       console.error('[pay][webhook][update]', e?.message || e);
@@ -611,14 +612,15 @@ router.post('/pay/webhook', express.json({ type: 'application/json' }), async (r
       let isService = false;
       try { const rows = await query('SELECT category FROM businesses WHERE id=?', [businessId]); isService = (rows[0]?.category ? String(rows[0].category).toLowerCase() === 'service' : false); } catch(_) {}
       if (isService) {
-        const [r2] = await query('SELECT status FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
+        const [r2] = await query('SELECT status, queue_number FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
         const st2 = r2 ? String(r2.status).toLowerCase() : '';
-        broadcast('queue:status', { id: Number(targetId), business_id: businessId, status: (st2 === 'served' ? 'served' : undefined), payment_status: 'paid' });
+        broadcast('queue:status', { id: Number(targetId), business_id: businessId, queue_number: Number(r2?.queue_number)||undefined, status: (st2 === 'served' ? 'served' : undefined), payment_status: 'paid' });
+        broadcast('payment:webhook', { business_id: businessId, id: Number(targetId), queue_number: Number(r2?.queue_number)||undefined, ok: true, ts: Date.now() });
       } else {
-        broadcast('queue:status', { id: Number(targetId), business_id: businessId, status: 'waiting', payment_status: 'paid' });
+        const [r2] = await query('SELECT queue_number FROM queues WHERE id=? AND business_id=?', [targetId, businessId]);
+        broadcast('queue:status', { id: Number(targetId), business_id: businessId, queue_number: Number(r2?.queue_number)||undefined, status: 'waiting', payment_status: 'paid' });
+        broadcast('payment:webhook', { business_id: businessId, id: Number(targetId), queue_number: Number(r2?.queue_number)||undefined, ok: true, ts: Date.now() });
       }
-
-      broadcast('payment:webhook', { business_id: businessId, id: Number(targetId), ok: true, ts: Date.now() });
     } catch (_) {  }
     return res.status(200).json({ received: true });
   } catch (e) {

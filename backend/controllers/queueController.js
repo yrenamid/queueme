@@ -392,10 +392,10 @@ async function updateQueueStatus(req, res) {
       if (!row) return res.status(404).json({ success:false, message:'Not found' });
       if (row.payment_status === 'paid') return res.status(400).json({ success:false, message:'Cannot cancel a paid order' });
     }
-  const sql = 'UPDATE queues SET status = ?, payment_status = COALESCE(?, payment_status), payment_method = COALESCE(?, payment_method), called_by = IF(? = "called", ' + (callerId != null ? '?' : 'NULL') + ', called_by), served_by = IF(? = "served", ' + (callerId != null ? '?' : 'NULL') + ', served_by), waiting_at = IF(?="waiting", NOW(), waiting_at), called_at = IF(?="called", NOW(), called_at), served_at = IF(?="served", NOW(), served_at) WHERE id=? AND business_id=?';
+  const sql = 'UPDATE queues SET status = ?, payment_status = COALESCE(?, payment_status), payment_method = COALESCE(?, payment_method), called_by = IF(? = "called", ' + (callerId != null ? '?' : 'NULL') + ', called_by), served_by = IF(? = "served", ' + (callerId != null ? '?' : 'NULL') + ', served_by), waiting_at = IF(?="waiting", NOW(), waiting_at), called_at = IF(?="called", NOW(), called_at), pending_payment_at = IF(?="pending_payment", NOW(), pending_payment_at), served_at = IF(?="served", NOW(), served_at) WHERE id=? AND business_id=?';
     const params = callerId != null
-  ? [status, payment_status || null, payment_method || null, status, callerId, status, callerId, status, status, status, id, req.user.business_id]
-  : [status, payment_status || null, payment_method || null, status, status, status, status, status, id, req.user.business_id];
+  ? [status, payment_status || null, payment_method || null, status, callerId, status, callerId, status, status, status, status, id, req.user.business_id]
+  : [status, payment_status || null, payment_method || null, status, status, status, status, status, status, id, req.user.business_id];
     try {
       await query(sql, params);
     } catch (err) {

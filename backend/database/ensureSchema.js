@@ -402,3 +402,29 @@ async function ensureFeedbackTable() {
 }
 
 module.exports.ensureFeedbackTable = ensureFeedbackTable;
+async function ensureQueueStageTimestamps() {
+  try {
+    // pending_payment_at
+    const r1 = await query(
+      'SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+      ['queues', 'pending_payment_at']
+    );
+    if (!(Number(r1?.[0]?.cnt || 0) > 0)) {
+      await query('ALTER TABLE queues ADD COLUMN pending_payment_at DATETIME NULL AFTER called_at');
+      console.log('[schema] Added queues.pending_payment_at');
+    }
+    // payment_confirmed_at
+    const r2 = await query(
+      'SELECT COUNT(*) as cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+      ['queues', 'payment_confirmed_at']
+    );
+    if (!(Number(r2?.[0]?.cnt || 0) > 0)) {
+      await query('ALTER TABLE queues ADD COLUMN payment_confirmed_at DATETIME NULL AFTER pending_payment_at');
+      console.log('[schema] Added queues.payment_confirmed_at');
+    }
+  } catch (e) {
+    console.warn('[schema] ensureQueueStageTimestamps failed (non-fatal):', e?.message || e);
+  }
+}
+
+module.exports.ensureQueueStageTimestamps = ensureQueueStageTimestamps;

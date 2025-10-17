@@ -18,7 +18,11 @@
           <table class="w-full text-sm table-fixed">
             <thead>
               <tr class="text-left text-xs uppercase tracking-wide bg-white/10">
-                <th class="px-2 py-2"><input type="checkbox" :checked="allSelected" @change="toggleAll($event)" /></th>
+                <th class="px-2 py-2 text-center">
+                  <label class="checkbox-wrap" aria-label="Select all">
+                    <input type="checkbox" class="big-checkbox" :checked="allSelected" @change="toggleAll($event)" />
+                  </label>
+                </th>
                 <th class="px-2 py-2">Queue #</th>
                 <th class="px-2 py-2">Customer</th>
                 <th class="px-2 py-2">Status</th>
@@ -29,7 +33,9 @@
             <tbody>
               <tr v-for="row in filtered" :key="row.id" class="border-t border-white/10">
                 <td class="px-2 py-2 text-center">
-                  <input type="checkbox" :value="row.id" v-model="selected" />
+                  <label class="checkbox-wrap" :aria-label="`Select queue ${row.queue_number}`">
+                    <input type="checkbox" class="big-checkbox" :value="row.id" v-model="selected" />
+                  </label>
                 </td>
                 <td class="px-2 py-2">{{ row.queue_number }}</td>
                 <td class="px-2 py-2">{{ row.customer_name }}</td>
@@ -400,5 +406,55 @@ export default {
   margin: 0 auto;
   max-height: 90vh;
   height: auto;
+}
+</style>
+<style scoped>
+
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px; 
+  border-radius: 6px;
+}
+
+.big-checkbox {
+  width: 20px;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 2px solid rgba(255,255,255,0.85);
+  border-radius: 4px;
+  background: transparent;
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+}
+
+.big-checkbox:hover {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+}
+
+.big-checkbox:focus {
+  box-shadow: 0 0 0 3px rgba(221,161,94,0.5); 
+}
+
+.big-checkbox:checked {
+  background-color: #DDA15E; 
+  border-color: #DDA15E;
+}
+
+.big-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 6px;
+  height: 12px;
+  border: solid #1B1B1B; 
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 </style>
