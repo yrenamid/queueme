@@ -143,10 +143,14 @@ export default {
       offJoin = onRealtime('queue:joined', (d) => push('Added', d));
       offStatus = onRealtime('queue:status', (d) => {
         const s = String(d?.status || '').toLowerCase();
-        if (s === 'served') push('Served', d);
+  if (s === 'served') push('Completed', d);
         else if (s === 'cancelled') push('Cancelled', d);
         else if (s === 'called') push('Called', d);
-      });
+
+  const ps = String(d?.payment_status || '').toLowerCase();
+  if (ps === 'paid' && s !== 'served') push('Payment Confirmed', d);
+      })
+      onRealtime('payment:webhook', (d) => push('Payment Confirmed', d));
       tick = setInterval(()=> items.value = [...items.value], 1000);
     });
     onBeforeUnmount(() => { if (offJoin) offJoin(); if (offStatus) offStatus(); if (tick) clearInterval(tick); });
