@@ -14,7 +14,6 @@ coverage/
 .env
 backend/.env
 client-side/.env
-config/vapid.json
 config/subscriptions.json
 *.local
 

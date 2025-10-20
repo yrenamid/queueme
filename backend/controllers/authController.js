@@ -7,6 +7,9 @@ const { generateSlug, generateBusinessQRCode, ensureUniqueSlug } = require('../u
 const { normalizePhoneDigits, isPasswordStrong, hasNoInternalSpaces, isNotBlank, isValidPHPhone } = require('../utils/validators');
 const crypto = require('crypto');
 const { sendEmail } = require('../utils/email');
+const fs = require('fs');
+const path = require('path');
+const { getSupabase } = require('../config/supabaseClient');
 
 
 
@@ -41,7 +44,6 @@ async function registerBusiness(req, res) {
     return res.status(400).json({ success: false, message: 'Proof of business registration is required (JPG/PNG/PDF up to 5MB)' });
   }
   try {
-
     const existingBiz = await query('SELECT id FROM businesses WHERE email = ? OR name = ?', [email, name]);
     if (existingBiz.length) {
       return res.status(409).json({ success: false, message: 'Business name, email, or phone already exists' });
@@ -93,11 +95,25 @@ async function registerBusiness(req, res) {
 
   try {
     const f = req.file;
-    if (f && f.filename && f.size != null) {
-      const urlPath = `/public/uploads/${encodeURIComponent(f.filename)}`;
-      await query('UPDATE businesses SET proof_url = ? WHERE id = ?', [urlPath, business_id]);
+    if (f && f.path && (f.size != null)) {
+      const supabase = await getSupabase();
+      const bucket = 'business-proofs';
+      const fileBuffer = fs.readFileSync(f.path);
+      const safeName = `${Date.now()}_${String(f.originalname || 'proof').replace(/[^a-zA-Z0-9._-]+/g, '_')}`;
+      const objectPath = `proofs/${safeName}`;
+      const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, fileBuffer, {
+        contentType: f.mimetype || 'application/octet-stream',
+        upsert: true
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+      const publicUrl = pub?.publicUrl || null;
+      if (publicUrl) {
+        await query('UPDATE businesses SET proof_url = ? WHERE id = ?', [publicUrl, business_id]);
+      }
+      try { fs.unlinkSync(f.path); } catch {}
     }
-  } catch (e) { console.warn('[registerBusiness] proof save skipped:', e?.message || e); }
+  } catch (e) { console.warn('[registerBusiness] proof upload skipped:', e?.message || e); }
 
 
   try {

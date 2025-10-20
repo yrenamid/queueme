@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -7,7 +8,7 @@ const { getPool } = require('./database/connection');
 const http = require('http');
 const realtime = require('./utils/realtime');
 const { ensureSettingsColumns, ensureQueueReadyColumns, ensureQueueWaitingColumn, ensureQueuePartySizeColumn, ensureQueueStatusEnum, ensureMenuColumns, ensureServicesColumns, ensureNotificationSettingsColumns, ensureFeedbackTable, ensureUsersPhoneColumn, ensureQueueInitialEWTColumn, ensureBusinessProofAndAdmin, ensureBusinessResetColumns, ensureUsersResetColumns, ensureQueueStageTimestamps } = require('./database/ensureSchema');
-const path = require('path');
+
 const fs = require('fs');
 const app = express();
 app.set('etag', false);
@@ -52,9 +53,7 @@ app.use(morgan('dev'));
 
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/public', express.static(path.join(__dirname, 'public')));
-app.use('/api/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 
 const clientDist = path.join(__dirname, '..', 'client-side', 'dist');
