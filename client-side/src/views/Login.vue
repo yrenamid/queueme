@@ -4,7 +4,7 @@
       <ion-toolbar>
         <div class="flex items-center mx-3 cursor-pointer" @click="goHome">
           <img class="h-10 w-10 me-2" src="../images/favicon.png" alt="logo" />
-          <p class="name">{{ businessName || 'Queue' }}<span v-if="!businessName">Me</span><span v-else></span></p>
+          <p class="name">Queue<span>Me</span></p>
         </div>
       </ion-toolbar>
     </ion-header>
@@ -102,7 +102,7 @@ export default {
     IonButton,
   },
   data() {
-    return { email: "", password: "", businessName: localStorage.getItem('businessName') || '' };
+    return { email: "", password: "", businessName: '' };
   },
 
   setup() {
