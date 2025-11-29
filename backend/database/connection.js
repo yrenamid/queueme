@@ -8,20 +8,6 @@ function getPool() {
 	if (!pool) {
 		pool = mysql.createPool(db);
 		console.log('[db] Connection pool created');
-		try {
-			console.log('[db][info] host=%s port=%s user=%s db=%s', db.host, db.port, db.user, db.database);
-			// Immediate ping test
-			pool.query('SELECT 1 AS ping').then(([rows]) => {
-				console.log('[db][ping] result:', rows);
-				return pool.query('SELECT VERSION() AS version');
-			}).then(([rows]) => {
-				console.log('[db][version] server:', rows && rows[0] ? rows[0].version : 'unknown');
-			}).catch((e) => {
-				console.error('[db][ping] failed:', e.code || '', e.message || e);
-			});
-		} catch (e) {
-			console.error('[db][init] debug failed:', e?.message || e);
-		}
 	}
 	return pool;
 }

@@ -4,6 +4,7 @@ const auth = require('../middleware/authMiddleware');
 const adminOnly = require('../middleware/adminMiddleware');
 const { query } = require('../database/connection');
 const { getAdminProfile, updateAdminProfile } = require('../controllers/adminController');
+const mysql = require('mysql2');
 
 // GET /api/admin/businesses?search=&category=&page=1&pageSize=20
 router.get('/businesses', auth, adminOnly, async (req, res) => {
@@ -146,5 +147,29 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
 
 router.get('/profile', auth, adminOnly, getAdminProfile);
 router.put('/profile', auth, adminOnly, updateAdminProfile);
+
+// GET /api/admin/db/tables - list tables and columns (super admin diagnostic)
+router.get('/db/tables', auth, adminOnly, async (req, res) => {
+  try {
+    const tables = await query('SHOW TABLES');
+    const keyName = tables.length ? Object.keys(tables[0])[0] : null;
+    const list = [];
+    for (const row of tables) {
+      const t = keyName ? row[keyName] : null;
+      if (!t) continue;
+      let columns = [];
+      try {
+        columns = await query('SHOW COLUMNS FROM `' + t + '`');
+      } catch (e) {
+        columns = [{ error: e.message || String(e) }];
+      }
+      list.push({ table: t, columns });
+    }
+    return res.json({ success: true, data: list });
+  } catch (e) {
+    console.error('[admin db tables]', e);
+    return res.status(500).json({ success: false, message: 'Failed to list tables', error: e.message || e });
+  }
+});
 
 module.exports = router;
