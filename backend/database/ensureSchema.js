@@ -428,3 +428,21 @@ async function ensureQueueStageTimestamps() {
 }
 
 module.exports.ensureQueueStageTimestamps = ensureQueueStageTimestamps;
+
+async function ensureUsersBusinessNullable() {
+  try {
+    const rows = await query(
+      'SELECT IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+      ['users', 'business_id']
+    );
+    const isNullable = String(rows?.[0]?.IS_NULLABLE || '').toUpperCase() === 'YES';
+    if (!isNullable) {
+      await query('ALTER TABLE users MODIFY COLUMN business_id INT NULL');
+      console.log('[schema] Altered users.business_id to allow NULL');
+    }
+  } catch (e) {
+    console.warn('[schema] ensureUsersBusinessNullable failed (non-fatal):', e?.message || e);
+  }
+}
+
+module.exports.ensureUsersBusinessNullable = ensureUsersBusinessNullable;

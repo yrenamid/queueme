@@ -26,7 +26,7 @@ async function sendEmail({ to, subject, text, html, replyTo, categories }) {
     console.warn('[email] SendGrid not configured; skipping email to', to);
     return { skipped: true };
   }
-  const from = process.env.EMAIL_FROM || 'QueueMe <noreply@queueme.email>';
+  const from = process.env.EMAIL_FROM || 'QueueMe <notif@queueme.email>';
   const safeText = text || htmlToText(html);
   const msg = {
     to,

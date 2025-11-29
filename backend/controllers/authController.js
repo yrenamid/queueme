@@ -162,31 +162,35 @@ async function login(req, res) {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ success: false, message: 'Missing email or password' });
   try {
-
     const bizRows = await query('SELECT * FROM businesses WHERE email = ?', [email]);
     let userData = null;
-    let isBusiness = false;
     if (bizRows.length) {
       const biz = bizRows[0];
       const match = await bcrypt.compare(password, biz.password);
       if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      isBusiness = true;
       userData = { id: biz.id, business_id: biz.id, role: 'owner', name: biz.name, businessName: biz.name, category: biz.category, is_admin: 0 };
     } else {
-      const staffRows = await query('SELECT u.*, b.name as businessName, b.category FROM users u JOIN businesses b ON b.id = u.business_id WHERE u.email = ?', [email]);
-      if (!staffRows.length) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      const staff = staffRows[0];
-      const match = await bcrypt.compare(password, staff.password);
+      const urows = await query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+      if (!urows.length) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      const user = urows[0];
+      const match = await bcrypt.compare(password, user.password);
       if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      userData = { id: staff.id, business_id: staff.business_id, role: staff.role, name: staff.name, businessName: staff.businessName, category: staff.category, is_admin: staff.is_admin ? 1 : 0 };
+
+      if (user.is_admin) {
+        // Independent super admin
+        userData = { id: user.id, business_id: null, role: user.role || 'manager', name: user.name, is_admin: 1 };
+      } else {
+        const b = await query('SELECT id, name, category, slug, qr_code_url, qr_code_img FROM businesses WHERE id = ? LIMIT 1', [user.business_id]);
+        if (!b.length) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        const biz = b[0];
+        userData = { id: user.id, business_id: user.business_id, role: user.role, name: user.name, businessName: biz.name, category: biz.category, is_admin: 0, slug: biz.slug };
+        const token = jwt.sign({ id: userData.id, business_id: userData.business_id, role: userData.role, is_admin: userData.is_admin }, jwtCfg.secret, { expiresIn: jwtCfg.expiresIn });
+        return res.json({ success: true, token, user: userData, qr: { qr_code_url: biz.qr_code_url, qr_code_img: biz.qr_code_img } });
+      }
     }
 
     const token = jwt.sign({ id: userData.id, business_id: userData.business_id, role: userData.role, is_admin: userData.is_admin || 0 }, jwtCfg.secret, { expiresIn: jwtCfg.expiresIn });
-    const biz = await query('SELECT slug, qr_code_url, qr_code_img FROM businesses WHERE id = ?', [userData.business_id]);
-    if (biz && biz[0] && biz[0].slug) {
-      userData.slug = biz[0].slug;
-    }
-    return res.json({ success: true, token, user: userData, qr: { qr_code_url: biz[0]?.qr_code_url, qr_code_img: biz[0]?.qr_code_img } });
+    return res.json({ success: true, token, user: userData, qr: null });
   } catch (err) {
     console.error('[login]', err);
     return res.status(500).json({ success: false, message: 'Server error' });
@@ -290,7 +294,13 @@ async function changePassword(req, res) {
   if (!current_password || !new_password) return res.status(400).json({ success: false, message: 'Current and new password are required' });
   if (!isPasswordStrong(new_password)) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters with at least one letter and one number' });
   try {
-    const userRows = await query('SELECT id, password FROM users WHERE id = ? AND business_id = ? LIMIT 1', [req.user.id, req.user.business_id]);
+    // If super admin, allow change by user id only
+    let userRows;
+    if (req.user && req.user.is_admin) {
+      userRows = await query('SELECT id, password FROM users WHERE id = ? LIMIT 1', [req.user.id]);
+    } else {
+      userRows = await query('SELECT id, password FROM users WHERE id = ? AND business_id = ? LIMIT 1', [req.user.id, req.user.business_id]);
+    }
     if (userRows.length) {
       const ok = await bcrypt.compare(String(current_password), String(userRows[0].password || ''));
       if (!ok) return res.status(400).json({ success: false, message: 'Current password is incorrect' });

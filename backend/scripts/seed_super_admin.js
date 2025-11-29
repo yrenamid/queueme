@@ -15,14 +15,6 @@ async function main() {
 
   console.log('[seed] Target admin email:', ADMIN_EMAIL);
 
-  const bizRows = await query('SELECT id, name FROM businesses ORDER BY id ASC LIMIT 1');
-  if (!bizRows.length) {
-    console.error('[seed] No businesses found. Please register a business first, then re-run this script.');
-    process.exit(1);
-  }
-  const business = bizRows[0];
-  console.log('[seed] Using business id:', business.id, 'name:', business.name);
-
   const conflictBiz = await query('SELECT id FROM businesses WHERE email = ? LIMIT 1', [ADMIN_EMAIL]);
   if (conflictBiz.length) {
     console.error('[seed] The admin email conflicts with a business email. Choose a different SUPER_ADMIN_EMAIL.');
@@ -34,10 +26,10 @@ async function main() {
 
   if (userRows.length) {
     const id = userRows[0].id;
-    await query('UPDATE users SET is_admin=1, password=?, role=COALESCE(role, "manager") WHERE id=?', [hashed, id]);
+    await query('UPDATE users SET is_admin=1, password=?, role=COALESCE(role, "manager"), business_id=NULL WHERE id=?', [hashed, id]);
     console.log('[seed] Existing user promoted to super admin:', ADMIN_EMAIL);
   } else {
-    await query('INSERT INTO users (business_id, name, email, phone, password, role, is_admin) VALUES (?,?,?,?,?,?,1)', [business.id, ADMIN_NAME, ADMIN_EMAIL, null, hashed, 'manager']);
+    await query('INSERT INTO users (business_id, name, email, phone, password, role, is_admin) VALUES (NULL,?,?,?,?,?,1)', [ADMIN_NAME, ADMIN_EMAIL, null, hashed, 'manager']);
     console.log('[seed] Super admin user created:', ADMIN_EMAIL);
   }
 
