@@ -58,11 +58,10 @@
             </div>
           <div class="flex flex-col">
             <label>Role</label>
-            <select v-model="staffForm.role" class="rounded text-black px-2 py-1 text-xs">
+            <select v-model="staffForm.role" class="rounded bg-white text-black px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#DDA15E]">
               <option value="owner">Owner</option>
               <option value="manager">Manager</option>
               <option value="cashier">Cashier</option>
-              <option value="staff">Staff</option>
             </select>
           </div>
           <div class="flex gap-2 pt-1">
@@ -136,7 +135,9 @@ export default {
   methods: {
     beginAdd() {
       this.editing = true; this.editMode = 'add';
-  this.staffForm = { tempId: Date.now(), name: '', email: '', password: '', role: 'staff' };
+      // First staff must be owner, subsequent default to manager for convenience
+      const initialRole = this.staffList.length === 0 ? 'owner' : 'manager';
+      this.staffForm = { tempId: Date.now(), name: '', email: '', password: '', role: initialRole };
     },
     editStaff(s) {
       this.editing = true; this.editMode = 'edit';
@@ -148,6 +149,8 @@ export default {
     submitStaff() {
       this.staffSubmitAttempted = true;
       if (!this.staffForm.name || !this.staffForm.email || (this.editMode==='add' && !this.staffForm.password)) return;
+      // Enforce first staff role owner regardless of selected value
+      if (this.staffList.length === 0) this.staffForm.role = 'owner';
       if (this.editMode === 'add') {
         this.staffList.push({ ...this.staffForm });
       } else {
@@ -212,4 +215,12 @@ export default {
 .tabcontent { display: none; }
 .custom-modal::part(content) { max-width: 450px; width: 100%; max-height: 80vh; height: auto; margin: auto; border-radius: 12px; overflow-y: auto; box-sizing: border-box; }
 .name span { color: #bc6c25; }
+select {
+  background-color: #ffffff;
+  color: #283618;
+}
+@media (prefers-color-scheme: dark) {
+  select { background-color: #444; color: #fefae0; }
+  select option { background-color: #444; color: #fefae0; }
+}
 </style>

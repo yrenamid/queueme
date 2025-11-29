@@ -32,6 +32,14 @@ export function connectRealtime(baseUrl?: string) {
 
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
   socket = new WebSocket(url);
+  socket.onopen = () => {
+    try {
+      const bizId = (typeof window !== 'undefined') ? window.localStorage.getItem('businessId') : null;
+      if (bizId) {
+        socket?.send(JSON.stringify({ type: 'subscribe', business_id: Number(bizId) }));
+      }
+    } catch (_) { /* noop */ }
+  };
   socket.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data);

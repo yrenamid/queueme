@@ -379,6 +379,13 @@ async function updateQueueStatus(req, res) {
   if (payment_method && !allowedMethod.includes(payment_method)) return res.status(400).json({ success:false, message:'Invalid payment method'});
   try {
 
+   
+    let originalStatus = null;
+    try {
+      const [orig] = await query('SELECT status FROM queues WHERE id=? AND business_id=?', [id, req.user.business_id]);
+      if (orig && orig.status) originalStatus = String(orig.status).toLowerCase();
+    } catch {}
+
     let callerId = null;
     try {
       if (req.user?.id) {
@@ -412,6 +419,23 @@ async function updateQueueStatus(req, res) {
     try {
       if (status === 'served' || status === 'cancelled') {
         await recomputeEWTForActive(req.user.business_id);
+      } else if (status === 'waiting') {
+        // Recalculate EWT for food-based pending->waiting transition when payment approved
+        let catRow = null;
+        try { const [c] = await query('SELECT category FROM businesses WHERE id=?', [req.user.business_id]); catRow = c; } catch {}
+        const cat = catRow && (catRow.category || (Array.isArray(catRow) && catRow[0]?.category)) ? String(catRow.category || catRow[0].category).toLowerCase() : null;
+        const rowNow = await query('SELECT payment_status FROM queues WHERE id=? AND business_id=?', [id, req.user.business_id]);
+        const payRow = rowNow && Array.isArray(rowNow) ? rowNow[0] : rowNow;
+        const isPaidFinal = String((payment_status || payRow?.payment_status || '')).toLowerCase() === 'paid';
+        if (cat === 'food' && originalStatus === 'pending' && isPaidFinal) {
+          try {
+            const { recalcEWTOnPayment } = require('./queueController');
+            const newEWT = await recalcEWTOnPayment(req.user.business_id, Number(id));
+            if (newEWT != null) {
+              try { broadcast('queue:updated', { business_id: req.user.business_id, id: Number(id), estimated_wait_time: Number(newEWT) }); } catch {}
+            }
+          } catch (ewtErr) { console.warn('[updateQueueStatus][recalcOnPayment]', ewtErr?.message || ewtErr); }
+        }
       }
     } catch (reErr) { console.warn('[recomputeEWTForActive]', reErr); }
     try {
@@ -704,5 +728,134 @@ async function callSelectedCustomers(req, res) {
 }
 
 module.exports = { joinQueue, listQueue, updateQueueStatus, updateQueueDetails, callSelectedCustomers, recomputeEWTForActive };
+
+
+async function recalcEWTOnPayment(businessId, queueId) {
+  const { getConnection } = require('../database/connection');
+  let conn = null;
+  try {
+    conn = await getConnection();
+    await conn.beginTransaction();
+    const lockKey = `payment_ewt_${businessId}`;
+    try {
+      const [lockRows] = await conn.query('SELECT GET_LOCK(?, 3) AS got', [lockKey]);
+      const got = Array.isArray(lockRows) ? (lockRows[0]?.got ?? lockRows[0]?.GET_LOCK) : 0;
+      if (!Number(got)) {
+        await conn.rollback();
+        conn.release();
+        conn = null;
+        return null; 
+      }
+    } catch { /* ignore */ }
+
+    // Fetch business category to ensure food-based
+    let category = null;
+    try {
+      const [bizRows] = await conn.query('SELECT category FROM businesses WHERE id=? FOR UPDATE', [businessId]);
+      if (bizRows && bizRows.category) category = String(bizRows.category).toLowerCase();
+      else if (Array.isArray(bizRows) && bizRows[0]?.category) category = String(bizRows[0].category).toLowerCase();
+    } catch {}
+    if (category !== 'food') {
+      try { await conn.query('DO RELEASE_LOCK(?)', [lockKey]); } catch {}
+      await conn.rollback();
+      conn.release();
+      return null; // not food-based
+    }
+
+    // Lock target row only if it is currently waiting & paid
+    let queueRow = null;
+    try {
+      const [qrRows] = await conn.query('SELECT id, queue_number, order_items, is_priority, status, payment_status FROM queues WHERE id=? AND business_id=? FOR UPDATE', [queueId, businessId]);
+      const r = Array.isArray(qrRows) ? qrRows[0] : qrRows;
+      if (!r || String(r.status).toLowerCase() !== 'waiting' || String(r.payment_status).toLowerCase() !== 'paid') {
+        try { await conn.query('DO RELEASE_LOCK(?)', [lockKey]); } catch {}
+        await conn.rollback();
+        conn.release();
+        return null; // nothing to do
+      }
+      queueRow = r;
+    } catch {
+      try { await conn.query('DO RELEASE_LOCK(?)', [lockKey]); } catch {}
+      await conn.rollback();
+      conn.release();
+      return null;
+    }
+
+    // Gather prep time context
+    let staff = 1; let avgFallback = 5; let menuMap = new Map(); let svcMap = new Map();
+    try {
+      const [set] = await conn.query('SELECT available_kitchen_staff FROM settings WHERE business_id=?', [businessId]);
+      if (set && (set.available_kitchen_staff != null || (Array.isArray(set) && set[0]?.available_kitchen_staff != null))) {
+        const val = Array.isArray(set) ? set[0].available_kitchen_staff : set.available_kitchen_staff;
+        staff = Number(val) > 0 ? Number(val) : 1;
+      }
+    } catch {}
+    try {
+      const [b] = await conn.query('SELECT avg_prep_time FROM businesses WHERE id=?', [businessId]);
+      if (b && (b.avg_prep_time != null || (Array.isArray(b) && b[0]?.avg_prep_time != null))) {
+        const val = Array.isArray(b) ? b[0].avg_prep_time : b.avg_prep_time;
+        avgFallback = Number(val) || avgFallback;
+      }
+    } catch {}
+    try {
+      const menuRows = await conn.query('SELECT id, duration_minutes FROM menu_items WHERE business_id=?', [businessId]);
+      const rows = Array.isArray(menuRows) ? menuRows : [];
+      menuMap = new Map(rows.map(r => [Number(r.id), (r.duration_minutes != null ? Number(r.duration_minutes) : null)]));
+    } catch {}
+    try {
+      const svcRows = await conn.query('SELECT id, duration_minutes FROM services WHERE business_id=?', [businessId]);
+      const rows = Array.isArray(svcRows) ? svcRows : [];
+      svcMap = new Map(rows.map(r => [Number(r.id), (r.duration_minutes != null ? Number(r.duration_minutes) : null)]));
+    } catch {}
+
+    function parseItems(val){ if (!val) return []; if (Array.isArray(val)) return val; try { const arr = JSON.parse(val); return Array.isArray(arr)?arr:[]; } catch { return []; } }
+    function itemDuration(it){
+      const q = Math.max(1, Number(it?.quantity || 1));
+      let per = null;
+      if (it && it.duration != null) per = Number(it.duration);
+      if ((per == null || Number.isNaN(per)) && it && it.id != null){
+        const idNum = Number(it.id);
+        per = menuMap.get(idNum) ?? svcMap.get(idNum) ?? null;
+      }
+      if (per == null || !Number.isFinite(per) || per <= 0) per = avgFallback;
+      return Math.max(0, Number(per)) * q;
+    }
+
+    const items = parseItems(queueRow.order_items);
+    let thisTotalDuration = 0;
+    for (const it of items) thisTotalDuration += itemDuration(it);
+    const staffRaw = Math.max(1, Number(staff || 1));
+    const effectiveStaff = 1 + 0.7 * (staffRaw - 1);
+    const thisOrderMinutes = (thisTotalDuration / Math.max(1, effectiveStaff));
+
+    // Compute ahead average for same priority group
+    const [aheadRows] = await conn.query(
+      'SELECT status, estimated_wait_time, initial_estimated_wait_time FROM queues WHERE business_id=? AND status IN ("waiting","called","delayed") AND is_priority=? AND queue_number < ? ORDER BY queue_number ASC',
+      [businessId, queueRow.is_priority ? 1 : 0, queueRow.queue_number]
+    );
+    const vals = (Array.isArray(aheadRows)?aheadRows:[]).map(r => {
+      const isDelayed = String(r.status||'').toLowerCase()==='delayed';
+      if (isDelayed && r.initial_estimated_wait_time != null) return Math.max(0, Number(r.initial_estimated_wait_time)||0);
+      return Math.max(0, Number(r.estimated_wait_time)||0);
+    });
+    const aheadAvg = vals.length ? (vals.reduce((a,b)=>a+b,0) / vals.length) : 0;
+    const newEWT = Math.ceil(Math.max(0,thisOrderMinutes) + Math.max(0,aheadAvg));
+
+    await conn.query('UPDATE queues SET estimated_wait_time=?, initial_estimated_wait_time=COALESCE(initial_estimated_wait_time, ?) WHERE id=? AND business_id=?', [newEWT, newEWT, queueId, businessId]);
+
+    try { await conn.query('DO RELEASE_LOCK(?)', [lockKey]); } catch {}
+    await conn.commit();
+    conn.release();
+    conn = null;
+    try { console.log('[EWT][recalcOnPayment]', { id: queueId, business_id: businessId, finalEWT: newEWT, staff_used: effectiveStaff, aheadAvg }); } catch {}
+    return newEWT;
+  } catch (e) {
+    try { if (conn) { await conn.rollback(); try { await conn.query('DO RELEASE_LOCK(?)', [`payment_ewt_${businessId}`]); } catch {}; conn.release(); } } catch {}
+    console.warn('[recalcEWTOnPayment] error', e?.message || e);
+    return null;
+  }
+}
+
+module.exports.recalcEWTOnPayment = recalcEWTOnPayment;
 
 
