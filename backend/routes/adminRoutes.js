@@ -4,6 +4,7 @@ const auth = require('../middleware/authMiddleware');
 const adminOnly = require('../middleware/adminMiddleware');
 const { query } = require('../database/connection');
 const { getAdminProfile, updateAdminProfile } = require('../controllers/adminController');
+const bcrypt = require('bcrypt');
 
 // GET /api/admin/businesses?search=&category=&page=1&pageSize=20
 router.get('/businesses', auth, adminOnly, async (req, res) => {
@@ -146,5 +147,40 @@ router.get('/businesses', auth, adminOnly, async (req, res) => {
 
 router.get('/profile', auth, adminOnly, getAdminProfile);
 router.put('/profile', auth, adminOnly, updateAdminProfile);
+
+// POST /api/admin/seed-super-admin?token=... (one-time bootstrap when login unavailable)
+router.post('/seed-super-admin', async (req, res) => {
+  try {
+    const token = req.query.token || (req.body && req.body.token);
+    const expected = process.env.SUPER_ADMIN_SEED_TOKEN || '';
+    if (!expected) return res.status(400).json({ success: false, message: 'Seed token not configured' });
+    if (String(token) !== String(expected)) return res.status(403).json({ success: false, message: 'Forbidden' });
+
+    const ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
+    const ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD; 
+    const ADMIN_PASSWORD_HASH = process.env.SUPER_ADMIN_PASSWORD_HASH;
+    const ADMIN_NAME = process.env.SUPER_ADMIN_NAME || 'Super Admin';
+    if (!ADMIN_EMAIL || (!ADMIN_PASSWORD && !ADMIN_PASSWORD_HASH)) {
+      return res.status(400).json({ success: false, message: 'Missing SUPER_ADMIN envs' });
+    }
+    const hashed = ADMIN_PASSWORD_HASH || await bcrypt.hash(ADMIN_PASSWORD, 10);
+    const conflictBiz = await query('SELECT id FROM businesses WHERE email = ? LIMIT 1', [ADMIN_EMAIL]);
+    if (conflictBiz.length) {
+      return res.status(400).json({ success: false, message: 'Email conflicts with a business account' });
+    }
+    const userRows = await query('SELECT id FROM users WHERE email = ? LIMIT 1', [ADMIN_EMAIL]);
+    if (userRows.length) {
+      const id = userRows[0].id;
+      await query('UPDATE users SET is_admin=1, password=?, role=COALESCE(role, "manager"), business_id=NULL WHERE id=?', [hashed, id]);
+      return res.json({ success: true, message: 'Existing user promoted to super admin', email: ADMIN_EMAIL });
+    } else {
+      await query('INSERT INTO users (business_id, name, email, phone, password, role, is_admin) VALUES (NULL,?,?,?,?,?,1)', [ADMIN_NAME, ADMIN_EMAIL, null, hashed, 'manager']);
+      return res.json({ success: true, message: 'Super admin user created', email: ADMIN_EMAIL });
+    }
+  } catch (e) {
+    console.error('[seed-super-admin]', e);
+    return res.status(500).json({ success: false, message: 'Seed failed', error: e.message || e });
+  }
+});
 
 module.exports = router;
