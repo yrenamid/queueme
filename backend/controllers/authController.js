@@ -168,7 +168,9 @@ async function login(req, res) {
       const biz = bizRows[0];
       const match = await bcrypt.compare(password, biz.password);
       if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      userData = { id: biz.id, business_id: biz.id, role: 'owner', name: biz.name, businessName: biz.name, category: biz.category, is_admin: 0 };
+      userData = { id: biz.id, business_id: biz.id, role: 'owner', name: biz.name, businessName: biz.name, category: biz.category, is_admin: 0, slug: biz.slug };
+      const token = jwt.sign({ id: userData.id, business_id: userData.business_id, role: userData.role, is_admin: userData.is_admin }, jwtCfg.secret, { expiresIn: jwtCfg.expiresIn });
+      return res.json({ success: true, token, user: userData, qr: { qr_code_url: biz.qr_code_url, qr_code_img: biz.qr_code_img } });
     } else {
       const urows = await query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
       if (!urows.length) return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -189,6 +191,7 @@ async function login(req, res) {
       }
     }
 
+    // Independent super admin reaches here (business/staff returned earlier)
     const token = jwt.sign({ id: userData.id, business_id: userData.business_id, role: userData.role, is_admin: userData.is_admin || 0 }, jwtCfg.secret, { expiresIn: jwtCfg.expiresIn });
     return res.json({ success: true, token, user: userData, qr: null });
   } catch (err) {
