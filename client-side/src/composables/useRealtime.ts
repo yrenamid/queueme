@@ -1,5 +1,6 @@
 let socket: WebSocket | null = null;
 const listeners: { [type: string]: Array<(data: any) => void> } = {};
+let pendingSubscribeBusinessId: number | null = null;
 
 
 function computeWsUrl(baseUrl?: string) {
@@ -34,9 +35,11 @@ export function connectRealtime(baseUrl?: string) {
   socket = new WebSocket(url);
   socket.onopen = () => {
     try {
-      const bizId = (typeof window !== 'undefined') ? window.localStorage.getItem('businessId') : null;
-      if (bizId) {
-        socket?.send(JSON.stringify({ type: 'subscribe', business_id: Number(bizId) }));
+      const subId = pendingSubscribeBusinessId != null
+        ? pendingSubscribeBusinessId
+        : ((typeof window !== 'undefined') ? Number(window.localStorage.getItem('businessId') || 'NaN') : NaN);
+      if (Number.isFinite(subId)) {
+        socket?.send(JSON.stringify({ type: 'subscribe', business_id: Number(subId) }));
       }
     } catch (_) { /* noop */ }
   };
@@ -76,4 +79,14 @@ export function onRealtime(type: string, cb: (data: any) => void) {
     const i = arr.indexOf(cb);
     if (i >= 0) arr.splice(i, 1);
   };
+}
+
+export function subscribeBusiness(businessId: number) {
+  if (!Number.isFinite(businessId)) return;
+  pendingSubscribeBusinessId = Number(businessId);
+  try {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'subscribe', business_id: Number(businessId) }));
+    }
+  } catch (_) { /* noop */ }
 }

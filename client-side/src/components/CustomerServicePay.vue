@@ -242,9 +242,10 @@ import api from "@/services/api";
 import { formatPeso } from "@/utils/currency";
 import RequestMoreTime from "./RequestMoreTime.vue";
 import RateServiceModal from "./RateServiceModal.vue";
-import { connectRealtime, onRealtime } from "@/composables/useRealtime";
+import { connectRealtime, onRealtime, subscribeBusiness } from "@/composables/useRealtime";
 import { useToast } from "@/composables/useToast";
 import { formatHMS } from "@/utils/time";
+import { notifyCustomerCalledOnce, clearCalledNotified } from "@/composables/useCalledNotification";
 
 export default {
   name: "CustomerServicePay",
@@ -414,7 +415,7 @@ export default {
 
 
     onMounted(() => {
-  try { connectRealtime(); } catch(err) { console.debug('[service-pay] realtime connect failed', err); }
+  try { connectRealtime(); subscribeBusiness(Number(route.params.business_id)); } catch(err) { console.debug('[service-pay] realtime connect failed', err); }
 
       loadBaseline();
       const business_id = Number(route.params.business_id);
@@ -483,7 +484,9 @@ export default {
             try { const key = `delayUsed:${business_id}:${id ?? queue_number ?? 'unknown'}`; localStorage.setItem(key, '1'); } catch(err) { console.debug('[service-pay] could not persist delayUsed', err); }
           }
           const s = String(ev.status || '').toLowerCase();
-          if (s === 'called') toast('You are being called now', 'info');
+          if (s === 'called') {
+            notifyCustomerCalledOnce({ business_id, id, queue_number });
+          }
           if (s === 'called') {
             if (ewtTimer) { clearInterval(ewtTimer); ewtTimer = null; }
             if (ewtSeconds.value != null) {
@@ -495,12 +498,13 @@ export default {
           }
           if (s === 'served') {
             toast('Thank you! Served complete', 'success');
+            clearCalledNotified(business_id, id, queue_number);
 
             hasDelayed.value = false;
             clearBaseline();
             try { const key = `delayUsed:${business_id}:${id ?? queue_number ?? 'unknown'}`; localStorage.removeItem(key); } catch(err) { console.debug('[service-pay] could not clear delayUsed', err); }
           }
-          if (s === 'cancelled') toast('Your queue has been cancelled', 'error');
+          if (s === 'cancelled') { toast('Your queue has been cancelled', 'error'); clearCalledNotified(business_id, id, queue_number); }
 
           if (s !== 'called' && ev.estimated_wait_time != null) applyEwtBaselineIfChanged(Number(ev.estimated_wait_time));
         }));
@@ -581,17 +585,20 @@ export default {
                 if (next === 'delayed') {
                   hasDelayed.value = true;
                   try { const key = `delayUsed:${business_id}:${id ?? queue_number ?? 'unknown'}`; localStorage.setItem(key, '1'); } catch(err) { console.debug('[service-pay] could not persist delayUsed', err); }
+                  // allow a future call event to notify again
+                  clearCalledNotified(business_id, id, queue_number);
                 }
                 if (mine.is_priority != null) isPriority.value = Boolean(mine.is_priority);
                 if (prev !== next) {
-                  if (next === 'called') toast('You are being called now', 'info');
+                  if (next === 'called') notifyCustomerCalledOnce({ business_id, id, queue_number });
                   if (next === 'served') {
                     toast('Thank you! Served complete', 'success');
+                    clearCalledNotified(business_id, id, queue_number);
                     hasDelayed.value = false;
                     clearBaseline();
                     try { const key = `delayUsed:${business_id}:${id ?? queue_number ?? 'unknown'}`; localStorage.removeItem(key); } catch(err) { console.debug('[service-pay] could not remove delayUsed', err); }
                   }
-                  if (next === 'cancelled') toast('Your queue has been cancelled', 'error');
+                  if (next === 'cancelled') { toast('Your queue has been cancelled', 'error'); clearCalledNotified(business_id, id, queue_number); }
                 }
               }
             }
